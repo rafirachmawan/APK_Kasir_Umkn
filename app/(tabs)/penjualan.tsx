@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   Alert,
   StyleSheet,
@@ -21,22 +22,36 @@ interface Transaksi {
   kembali: number;
 }
 
-const daftarProduk = [
-  { label: "Kopi", value: "Kopi", harga: 10000 },
-  { label: "Teh", value: "Teh", harga: 8000 },
-  { label: "Roti", value: "Roti", harga: 5000 },
-];
-
 export default function Penjualan() {
   const [open, setOpen] = useState(false);
+  const [produkList, setProdukList] = useState<
+    { label: string; value: string; harga: number }[]
+  >([]);
   const [selectedProduk, setSelectedProduk] = useState<string | null>(null);
   const [jumlah, setJumlah] = useState<string>("");
   const [kasir, setKasir] = useState<string>("");
   const [bayar, setBayar] = useState<string>("");
+
   const router = useRouter();
 
+  useFocusEffect(
+    useCallback(() => {
+      const ambilProduk = async () => {
+        const data = await AsyncStorage.getItem("produkList");
+        const list = data ? JSON.parse(data) : [];
+        const formatted = list.map((p: any) => ({
+          label: p.nama,
+          value: p.nama,
+          harga: p.harga,
+        }));
+        setProdukList(formatted);
+      };
+      ambilProduk();
+    }, [])
+  );
+
   const simpanTransaksi = async () => {
-    const produk = daftarProduk.find((p) => p.value === selectedProduk);
+    const produk = produkList.find((p) => p.value === selectedProduk);
     const qty = parseInt(jumlah);
     const uangBayar = parseInt(bayar);
 
@@ -108,10 +123,7 @@ export default function Penjualan() {
         value={selectedProduk}
         setOpen={setOpen}
         setValue={setSelectedProduk}
-        items={daftarProduk.map((item) => ({
-          label: item.label,
-          value: item.value,
-        }))}
+        items={produkList}
         placeholder="Pilih Produk"
         style={styles.dropdown}
         dropDownContainerStyle={styles.dropdown}
