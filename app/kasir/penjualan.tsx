@@ -6,6 +6,7 @@ import {
   FlatList,
   Image,
   ImageSourcePropType,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -20,17 +21,19 @@ interface Produk {
   gambar: ImageSourcePropType;
 }
 
-interface TransaksiItem {
+interface CartItem {
+  id: string;
   nama: string;
   harga: number;
+  jumlah: number;
 }
 
 export default function PenjualanScreen() {
   const router = useRouter();
   const [produkList, setProdukList] = useState<Produk[]>([]);
-  const [keranjang, setKeranjang] = useState<TransaksiItem[]>([]);
+  const [keranjang, setKeranjang] = useState<CartItem[]>([]);
   const [uangBayar, setUangBayar] = useState("");
-  const [total, setTotal] = useState(0);
+  const [namaPemesan, setNamaPemesan] = useState("");
 
   useEffect(() => {
     const data: Produk[] = [
@@ -74,38 +77,55 @@ export default function PenjualanScreen() {
     setProdukList(data);
   }, []);
 
-  useEffect(() => {
-    const sum = keranjang.reduce((acc, item) => acc + item.harga, 0);
-    setTotal(sum);
-  }, [keranjang]);
-
-  const handleTambahProduk = (item: Produk) => {
-    setKeranjang([...keranjang, { nama: item.nama, harga: item.harga }]);
+  const tambahItem = (produk: Produk | CartItem) => {
+    setKeranjang((prev) => {
+      const existing = prev.find((item) => item.id === produk.id);
+      if (existing) {
+        return prev.map((item) =>
+          item.id === produk.id ? { ...item, jumlah: item.jumlah + 1 } : item
+        );
+      } else {
+        return [
+          ...prev,
+          { id: produk.id, nama: produk.nama, harga: produk.harga, jumlah: 1 },
+        ];
+      }
+    });
   };
 
-  const handleHapusItem = (index: number) => {
-    const newList = [...keranjang];
-    newList.splice(index, 1);
-    setKeranjang(newList);
+  const kurangiItem = (id: string) => {
+    setKeranjang((prev) =>
+      prev
+        .map((item) =>
+          item.id === id ? { ...item, jumlah: item.jumlah - 1 } : item
+        )
+        .filter((item) => item.jumlah > 0)
+    );
   };
 
-  const handleKonfirmasi = async () => {
-    const sanitizedBayar = uangBayar.replace(/[^\d]/g, "");
-    const bayar = parseInt(sanitizedBayar);
+  const total = keranjang.reduce(
+    (sum, item) => sum + item.harga * item.jumlah,
+    0
+  );
 
+  const handleBayar = async () => {
+    const bayar = parseInt(uangBayar.replace(/[^\d]/g, ""));
+    if (!namaPemesan) {
+      Alert.alert("Nama pemesan wajib diisi");
+      return;
+    }
     if (isNaN(bayar) || bayar < total) {
       Alert.alert("Uang tidak cukup atau tidak valid");
       return;
     }
-
     const transaksi = {
       items: keranjang,
       total,
       bayar,
       kembali: bayar - total,
       waktu: new Date().toISOString(),
+      namaPemesan,
     };
-
     const existing = await AsyncStorage.getItem("penjualan");
     const list = existing ? JSON.parse(existing) : [];
     await AsyncStorage.setItem(
@@ -113,12 +133,9 @@ export default function PenjualanScreen() {
       JSON.stringify([...list, transaksi])
     );
     await AsyncStorage.setItem("lastKwitansi", JSON.stringify(transaksi));
-
-    // Reset state
     setKeranjang([]);
     setUangBayar("");
-    setTotal(0);
-
+    setNamaPemesan("");
     router.push("/kasir/kwitansi");
   };
 
@@ -129,109 +146,146 @@ export default function PenjualanScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.tokoName}>Toko Custom Name</Text>
-      <Text style={styles.header}>Pilih Produk</Text>
+    <View style={{ flex: 1 }}>
+      {/* Produk Grid */}
+      <View style={{ flex: 1, padding: 10 }}>
+        <Text style={styles.sectionTitle}>Menu</Text>
+        <FlatList
+          data={produkList}
+          numColumns={2}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.productCard}
+              onPress={() => tambahItem(item)}
+            >
+              <Image source={item.gambar} style={styles.productImage} />
+              <Text style={styles.productName}>{item.nama}</Text>
+              <Text style={styles.productPrice}>
+                Rp {item.harga.toLocaleString()}
+              </Text>
+            </TouchableOpacity>
+          )}
+        />
+      </View>
 
-      <FlatList
-        data={produkList}
-        keyExtractor={(item) => item.id}
-        numColumns={2}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.produkItem}
-            onPress={() => handleTambahProduk(item)}
-          >
-            <Image source={item.gambar} style={styles.produkImage} />
-            <Text style={styles.produkNama}>{item.nama}</Text>
-            <Text style={styles.produkHarga}>Rp {item.harga}</Text>
-          </TouchableOpacity>
-        )}
-      />
-
-      <Text style={styles.header}>Ringkasan</Text>
-      {keranjang.map((item, index) => (
-        <View key={index} style={styles.ringkasanItem}>
-          <Text>
-            {item.nama} - Rp {item.harga.toLocaleString("id-ID")}
-          </Text>
-          <TouchableOpacity onPress={() => handleHapusItem(index)}>
-            <Text style={styles.hapusText}>❌</Text>
-          </TouchableOpacity>
-        </View>
-      ))}
-
-      <Text style={styles.total}>
-        Total: Rp {total.toLocaleString("id-ID")}
-      </Text>
-
-      <TextInput
-        placeholder="Masukkan uang bayar"
-        keyboardType="numeric"
-        value={formatUang(uangBayar)}
-        onChangeText={setUangBayar}
-        style={styles.input}
-      />
-
-      <TouchableOpacity style={styles.button} onPress={handleKonfirmasi}>
-        <Text style={styles.buttonText}>Konfirmasi</Text>
-      </TouchableOpacity>
+      {/* Keranjang di bawah */}
+      <View style={styles.cartPanel}>
+        <ScrollView style={{ maxHeight: 160 }}>
+          {keranjang.map((item) => (
+            <View key={item.id} style={styles.cartItem}>
+              <View style={{ flex: 1 }}>
+                <Text>{item.nama}</Text>
+                <Text style={{ color: "gray" }}>
+                  Rp {item.harga.toLocaleString()}
+                </Text>
+              </View>
+              <View style={styles.quantityControls}>
+                <TouchableOpacity onPress={() => kurangiItem(item.id)}>
+                  <Text style={styles.qtyBtn}>-</Text>
+                </TouchableOpacity>
+                <Text style={{ marginHorizontal: 8 }}>{item.jumlah}</Text>
+                <TouchableOpacity onPress={() => tambahItem(item)}>
+                  <Text style={styles.qtyBtn}>+</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+        <TextInput
+          placeholder="Nama Pemesan"
+          value={namaPemesan}
+          onChangeText={setNamaPemesan}
+          style={styles.input}
+        />
+        <TextInput
+          placeholder="Masukkan uang bayar"
+          keyboardType="numeric"
+          value={formatUang(uangBayar)}
+          onChangeText={(text) => setUangBayar(text.replace(/[^\d]/g, ""))}
+          style={styles.input}
+        />
+        <Text style={styles.totalText}>Total: Rp {total.toLocaleString()}</Text>
+        <TouchableOpacity style={styles.bayarButton} onPress={handleBayar}>
+          <Text style={{ color: "white", fontWeight: "bold" }}>BAYAR</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20 },
-  tokoName: {
-    fontSize: 20,
+  sectionTitle: {
+    fontSize: 18,
     fontWeight: "bold",
-    textAlign: "center",
-    color: "#008080",
-    marginBottom: 6,
+    marginBottom: 10,
   },
-  header: { fontSize: 18, fontWeight: "bold", marginVertical: 10 },
-  produkItem: {
-    backgroundColor: "#e0f7f7",
-    padding: 12,
-    margin: 6,
+  productCard: {
+    backgroundColor: "white",
     borderRadius: 8,
-    flex: 1,
+    padding: 10,
     alignItems: "center",
+    margin: 6,
+    flex: 1,
+    elevation: 2,
   },
-  produkImage: {
+  productImage: {
     width: 60,
     height: 60,
-    marginBottom: 8,
-    borderRadius: 8,
-    resizeMode: "cover",
+    borderRadius: 6,
+    marginBottom: 6,
   },
-  produkNama: { fontSize: 16 },
-  produkHarga: { fontSize: 14, color: "#333" },
+  productName: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  productPrice: {
+    fontSize: 12,
+    color: "gray",
+  },
+  cartPanel: {
+    backgroundColor: "#f0f0f0",
+    padding: 10,
+    borderTopWidth: 1,
+    borderColor: "#ddd",
+  },
+  cartItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderColor: "#eee",
+  },
+  quantityControls: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  qtyBtn: {
+    backgroundColor: "#ddd",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
   input: {
     borderWidth: 1,
     borderColor: "#ccc",
     padding: 10,
     borderRadius: 6,
-    marginVertical: 10,
+    marginTop: 10,
     fontSize: 16,
+    backgroundColor: "white",
   },
-  button: {
+  totalText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginVertical: 10,
+    textAlign: "right",
+  },
+  bayarButton: {
     backgroundColor: "#008080",
     padding: 14,
     borderRadius: 6,
     alignItems: "center",
-  },
-  buttonText: { color: "white", fontWeight: "bold" },
-  total: { fontSize: 18, marginVertical: 10 },
-  ringkasanItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginVertical: 4,
-  },
-  hapusText: {
-    fontSize: 16,
-    color: "#b00020",
-    paddingHorizontal: 10,
   },
 });

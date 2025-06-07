@@ -9,12 +9,19 @@ import {
   View,
 } from "react-native";
 
+interface Item {
+  nama: string;
+  harga: number;
+  jumlah: number;
+}
+
 interface Transaksi {
-  items: { nama: string; harga: number }[];
+  items: Item[];
   total: number;
   bayar: number;
   kembali: number;
   waktu: string;
+  namaPemesan: string;
 }
 
 export default function KwitansiScreen() {
@@ -31,44 +38,85 @@ export default function KwitansiScreen() {
 
   if (!data) return <Text style={styles.loading}>🕐 Memuat kwitansi...</Text>;
 
-  const { items, total, bayar, kembali, waktu } = data;
+  const { items, total, bayar, kembali, waktu, namaPemesan } = data;
   const tanggal = new Date(waktu).toLocaleString("id-ID");
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.receiptBox}>
-        <Text style={styles.tokoName}>Toko Custom Name</Text>
-        <Text style={styles.header}>🧾 KWITANSI PENJUALAN</Text>
-        <Text style={styles.subText}>Tanggal: {tanggal}</Text>
-        <View style={styles.dottedLine} />
+        <Text style={styles.receiptTitle}>KASIRO</Text>
+        <Text style={styles.line}>------------------------------</Text>
+
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>No Nota</Text>
+          <Text>: CS/01/{tanggal.replace(/\D/g, "").slice(0, 10)}/0034</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Waktu</Text>
+          <Text>: {tanggal}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Order</Text>
+          <Text>: kasiro</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Kasir</Text>
+          <Text>: kasiro</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Jenis Order</Text>
+          <Text>: Free Table</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Nama Order</Text>
+          <Text>: {namaPemesan}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Nomor Meja</Text>
+          <Text>: Free Table (1)</Text>
+        </View>
+
+        <Text style={styles.line}>------------------------------</Text>
 
         {items.map((item, idx) => (
           <View key={idx} style={styles.itemRow}>
-            <Text style={styles.itemName}>{item.nama}</Text>
-            <Text style={styles.itemPrice}>
-              Rp {item.harga.toLocaleString("id-ID")}
+            <Text>
+              {item.jumlah} {item.nama}
             </Text>
+            <Text>{(item.harga * item.jumlah).toLocaleString("id-ID")}</Text>
           </View>
         ))}
 
-        <View style={styles.dottedLine} />
+        <Text style={styles.line}>------------------------------</Text>
+        <Text style={styles.summary}>
+          Subtotal {items.length} Produk{" "}
+          {total.toLocaleString("id-ID").padStart(10)}
+        </Text>
+        <Text style={styles.summary}>
+          Total{" ".repeat(18)}
+          {total.toLocaleString("id-ID")}
+        </Text>
 
-        <View style={styles.summaryRow}>
-          <Text style={styles.label}>Total</Text>
-          <Text style={styles.value}>Rp {total.toLocaleString("id-ID")}</Text>
-        </View>
-        <View style={styles.summaryRow}>
-          <Text style={styles.label}>Dibayar</Text>
-          <Text style={styles.value}>Rp {bayar.toLocaleString("id-ID")}</Text>
-        </View>
-        <View style={styles.summaryRow}>
-          <Text style={styles.label}>Kembalian</Text>
-          <Text style={styles.value}>Rp {kembali.toLocaleString("id-ID")}</Text>
-        </View>
+        <Text style={styles.line}>------------------------------</Text>
+        <Text style={styles.summary}>
+          Tunai{" ".repeat(20)}
+          {bayar.toLocaleString("id-ID")}
+        </Text>
+        <Text style={styles.summary}>
+          Total Bayar{" ".repeat(13)}
+          {bayar.toLocaleString("id-ID")}
+        </Text>
+        <Text style={styles.summary}>
+          Kembalian{" ".repeat(15)}
+          {kembali.toLocaleString("id-ID")}
+        </Text>
 
-        <View style={styles.dottedLine} />
-
-        <Text style={styles.thankyou}>🙏 Terima kasih atas pembeliannya!</Text>
+        <Text style={styles.line}>------------------------------</Text>
+        <Text style={styles.footer}>password wifi : KASIRO2025</Text>
+        <Text style={styles.footer}>
+          Terbayar {tanggal}
+          {"\n"}dicetak: kasiro
+        </Text>
       </View>
 
       <TouchableOpacity
@@ -98,65 +146,39 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 4,
   },
-  tokoName: {
-    fontSize: 18,
-    fontWeight: "600",
+  receiptTitle: {
     textAlign: "center",
-    color: "#333",
+    fontWeight: "bold",
+    fontSize: 18,
     marginBottom: 4,
   },
-  header: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#008080",
+  line: {
     textAlign: "center",
-    marginBottom: 6,
+    fontFamily: "monospace",
+    letterSpacing: 1,
   },
-  subText: {
-    textAlign: "center",
-    fontSize: 14,
-    color: "#444",
-    marginBottom: 10,
+  infoRow: {
+    flexDirection: "row",
+    justifyContent: "flex-start",
   },
-  dottedLine: {
-    borderBottomWidth: 1,
-    borderStyle: "dotted",
-    borderColor: "#aaa",
-    marginVertical: 10,
+  infoLabel: {
+    width: 110,
+    fontWeight: "500",
   },
   itemRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginVertical: 4,
   },
-  itemName: {
-    fontSize: 16,
-    color: "#333",
-  },
-  itemPrice: {
-    fontSize: 16,
-    color: "#333",
-  },
-  summaryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  summary: {
+    fontFamily: "monospace",
+    fontSize: 14,
     marginVertical: 2,
   },
-  label: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#444",
-  },
-  value: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#111",
-  },
-  thankyou: {
+  footer: {
     textAlign: "center",
+    fontSize: 12,
+    marginTop: 10,
     fontStyle: "italic",
-    marginTop: 14,
-    color: "#666",
   },
   button: {
     backgroundColor: "#008080",
