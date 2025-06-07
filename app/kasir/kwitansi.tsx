@@ -1,7 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from "@react-navigation/native";
+import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -28,18 +31,50 @@ export default function KwitansiScreen() {
   const router = useRouter();
   const [data, setData] = useState<Transaksi | null>(null);
 
-  useEffect(() => {
-    const loadData = async () => {
-      const last = await AsyncStorage.getItem("lastKwitansi");
-      if (last) setData(JSON.parse(last));
-    };
-    loadData();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      const loadData = async () => {
+        const last = await AsyncStorage.getItem("lastKwitansi");
+        if (last) setData(JSON.parse(last));
+      };
+      loadData();
+    }, [])
+  );
 
   if (!data) return <Text style={styles.loading}>🕐 Memuat kwitansi...</Text>;
 
   const { items, total, bayar, kembali, waktu, namaPemesan } = data;
   const tanggal = new Date(waktu).toLocaleString("id-ID");
+
+  const handleShareToWhatsApp = () => {
+    const pesan = `
+🧾 KWITANSI KASIRO
+------------------------------
+Nama: ${namaPemesan}
+Waktu: ${tanggal}
+${items
+  .map(
+    (item) =>
+      `${item.jumlah} x ${item.nama} = Rp ${(
+        item.jumlah * item.harga
+      ).toLocaleString("id-ID")}`
+  )
+  .join("\n")}
+------------------------------
+Total: Rp ${total.toLocaleString("id-ID")}
+Dibayar: Rp ${bayar.toLocaleString("id-ID")}
+Kembalian: Rp ${kembali.toLocaleString("id-ID")}
+------------------------------
+Terima kasih telah membeli di KASIRO.`;
+
+    const url = `whatsapp://send?text=${encodeURIComponent(pesan)}`;
+    Linking.openURL(url).catch(() =>
+      Alert.alert(
+        "WhatsApp tidak tersedia",
+        "Pastikan WhatsApp sudah terinstal di perangkat Anda."
+      )
+    );
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -57,11 +92,11 @@ export default function KwitansiScreen() {
         </View>
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Order</Text>
-          <Text>: kasiro</Text>
+          <Text>: {namaPemesan}</Text>
         </View>
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Kasir</Text>
-          <Text>: kasiro</Text>
+          <Text>: KASIRO</Text>
         </View>
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Jenis Order</Text>
@@ -93,21 +128,21 @@ export default function KwitansiScreen() {
           {total.toLocaleString("id-ID").padStart(10)}
         </Text>
         <Text style={styles.summary}>
-          Total{" ".repeat(18)}
+          Total {" ".repeat(18)}
           {total.toLocaleString("id-ID")}
         </Text>
 
         <Text style={styles.line}>------------------------------</Text>
         <Text style={styles.summary}>
-          Tunai{" ".repeat(20)}
+          Tunai {" ".repeat(20)}
           {bayar.toLocaleString("id-ID")}
         </Text>
         <Text style={styles.summary}>
-          Total Bayar{" ".repeat(13)}
+          Total Bayar {" ".repeat(13)}
           {bayar.toLocaleString("id-ID")}
         </Text>
         <Text style={styles.summary}>
-          Kembalian{" ".repeat(15)}
+          Kembalian {" ".repeat(15)}
           {kembali.toLocaleString("id-ID")}
         </Text>
 
@@ -115,7 +150,7 @@ export default function KwitansiScreen() {
         <Text style={styles.footer}>password wifi : KASIRO2025</Text>
         <Text style={styles.footer}>
           Terbayar {tanggal}
-          {"\n"}dicetak: kasiro
+          {"\n"}dicetak: KASIRO
         </Text>
       </View>
 
@@ -124,6 +159,13 @@ export default function KwitansiScreen() {
         onPress={() => router.replace("/kasir/penjualan")}
       >
         <Text style={styles.buttonText}>🔁 Transaksi Baru</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.button, { backgroundColor: "#25D366" }]}
+        onPress={handleShareToWhatsApp}
+      >
+        <Text style={styles.buttonText}>📤 Kirim ke WhatsApp</Text>
       </TouchableOpacity>
     </ScrollView>
   );

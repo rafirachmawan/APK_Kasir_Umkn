@@ -192,12 +192,16 @@ export default function PenjualanScreen() {
             </View>
           ))}
         </ScrollView>
+
+        <Text style={styles.label}>Nama Pemesan</Text>
         <TextInput
-          placeholder="Nama Pemesan"
+          placeholder="Masukkan nama pemesan"
           value={namaPemesan}
           onChangeText={setNamaPemesan}
           style={styles.input}
         />
+
+        <Text style={styles.label}>Uang Bayar</Text>
         <TextInput
           placeholder="Masukkan uang bayar"
           keyboardType="numeric"
@@ -205,6 +209,7 @@ export default function PenjualanScreen() {
           onChangeText={(text) => setUangBayar(text.replace(/[^\d]/g, ""))}
           style={styles.input}
         />
+
         <Text style={styles.totalText}>Total: Rp {total.toLocaleString()}</Text>
         <TouchableOpacity style={styles.bayarButton} onPress={handleBayar}>
           <Text style={{ color: "white", fontWeight: "bold" }}>BAYAR</Text>
@@ -272,9 +277,14 @@ const styles = StyleSheet.create({
     borderColor: "#ccc",
     padding: 10,
     borderRadius: 6,
-    marginTop: 10,
+    marginTop: 5,
     fontSize: 16,
     backgroundColor: "white",
+  },
+  label: {
+    marginTop: 10,
+    fontWeight: "bold",
+    fontSize: 14,
   },
   totalText: {
     fontSize: 16,
