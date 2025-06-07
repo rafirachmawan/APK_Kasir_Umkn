@@ -5,6 +5,7 @@ import {
   Alert,
   FlatList,
   Image,
+  ImageSourcePropType,
   StyleSheet,
   Text,
   TextInput,
@@ -16,7 +17,7 @@ interface Produk {
   id: string;
   nama: string;
   harga: number;
-  gambar?: string;
+  gambar: ImageSourcePropType;
 }
 
 interface TransaksiItem {
@@ -37,19 +38,37 @@ export default function PenjualanScreen() {
         id: "1",
         nama: "Kopi Hitam",
         harga: 8000,
-        gambar: "https://via.placeholder.com/100x100.png?text=Kopi",
+        gambar: require("../../assets/images/kopi.jpg"),
       },
       {
         id: "2",
         nama: "Teh Manis",
         harga: 6000,
-        gambar: "https://via.placeholder.com/100x100.png?text=Teh",
+        gambar: require("../../assets/images/kopi.jpg"),
       },
       {
         id: "3",
         nama: "Susu Dingin",
         harga: 10000,
-        gambar: "https://via.placeholder.com/100x100.png?text=Susu",
+        gambar: require("../../assets/images/kopi.jpg"),
+      },
+      {
+        id: "4",
+        nama: "Roti Bakar",
+        harga: 12000,
+        gambar: require("../../assets/images/kopi.jpg"),
+      },
+      {
+        id: "5",
+        nama: "Air Mineral",
+        harga: 3000,
+        gambar: require("../../assets/images/kopi.jpg"),
+      },
+      {
+        id: "6",
+        nama: "Mie Instan",
+        harga: 7000,
+        gambar: require("../../assets/images/kopi.jpg"),
       },
     ];
     setProdukList(data);
@@ -71,7 +90,9 @@ export default function PenjualanScreen() {
   };
 
   const handleKonfirmasi = async () => {
-    const bayar = parseInt(uangBayar);
+    const sanitizedBayar = uangBayar.replace(/[^\d]/g, "");
+    const bayar = parseInt(sanitizedBayar);
+
     if (isNaN(bayar) || bayar < total) {
       Alert.alert("Uang tidak cukup atau tidak valid");
       return;
@@ -93,7 +114,19 @@ export default function PenjualanScreen() {
     );
     await AsyncStorage.setItem("lastKwitansi", JSON.stringify(transaksi));
 
+    // Reset state
+    setKeranjang([]);
+    setUangBayar("");
+    setTotal(0);
+
+    // Navigasi ke kwitansi
     router.push("/kasir/kwitansi");
+  };
+
+  const formatUang = (value: string) => {
+    const angka = value.replace(/[^\d]/g, "");
+    if (!angka) return "";
+    return "Rp " + parseInt(angka).toLocaleString("id-ID");
   };
 
   return (
@@ -108,7 +141,7 @@ export default function PenjualanScreen() {
             style={styles.produkItem}
             onPress={() => handleTambahProduk(item)}
           >
-            <Image source={{ uri: item.gambar }} style={styles.produkImage} />
+            <Image source={item.gambar} style={styles.produkImage} />
             <Text style={styles.produkNama}>{item.nama}</Text>
             <Text style={styles.produkHarga}>Rp {item.harga}</Text>
           </TouchableOpacity>
@@ -119,19 +152,21 @@ export default function PenjualanScreen() {
       {keranjang.map((item, index) => (
         <View key={index} style={styles.ringkasanItem}>
           <Text>
-            {item.nama} - Rp {item.harga}
+            {item.nama} - Rp {item.harga.toLocaleString("id-ID")}
           </Text>
           <TouchableOpacity onPress={() => handleHapusItem(index)}>
             <Text style={styles.hapusText}>❌</Text>
           </TouchableOpacity>
         </View>
       ))}
-      <Text style={styles.total}>Total: Rp {total}</Text>
+      <Text style={styles.total}>
+        Total: Rp {total.toLocaleString("id-ID")}
+      </Text>
 
       <TextInput
         placeholder="Masukkan uang bayar"
         keyboardType="numeric"
-        value={uangBayar}
+        value={formatUang(uangBayar)}
         onChangeText={setUangBayar}
         style={styles.input}
       />
@@ -154,7 +189,13 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
   },
-  produkImage: { width: 60, height: 60, marginBottom: 8, borderRadius: 8 },
+  produkImage: {
+    width: 60,
+    height: 60,
+    marginBottom: 8,
+    borderRadius: 8,
+    resizeMode: "cover",
+  },
   produkNama: { fontSize: 16 },
   produkHarga: { fontSize: 14, color: "#333" },
   input: {
@@ -163,6 +204,7 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 6,
     marginVertical: 10,
+    fontSize: 16,
   },
   button: {
     backgroundColor: "#008080",

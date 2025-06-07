@@ -1,4 +1,3 @@
-// File: app/kasir/kwitansi.tsx
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -30,37 +29,52 @@ export default function KwitansiScreen() {
     loadData();
   }, []);
 
-  if (!data) return <Text style={styles.loading}>Memuat kwitansi...</Text>;
+  if (!data) return <Text style={styles.loading}>🕐 Memuat kwitansi...</Text>;
 
   const { items, total, bayar, kembali, waktu } = data;
   const tanggal = new Date(waktu).toLocaleString("id-ID");
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.header}>🧾 Kwitansi Pembelian</Text>
+      <View style={styles.receiptBox}>
+        <Text style={styles.header}>🧾 KWITANSI PENJUALAN</Text>
+        <Text style={styles.subText}>Tanggal: {tanggal}</Text>
+        <View style={styles.dottedLine} />
 
-      <Text style={styles.subText}>Tanggal: {tanggal}</Text>
-
-      <View style={styles.listContainer}>
         {items.map((item, idx) => (
           <View key={idx} style={styles.itemRow}>
             <Text style={styles.itemName}>{item.nama}</Text>
-            <Text style={styles.itemPrice}>Rp {item.harga}</Text>
+            <Text style={styles.itemPrice}>
+              Rp {item.harga.toLocaleString("id-ID")}
+            </Text>
           </View>
         ))}
-      </View>
 
-      <View style={styles.summary}>
-        <Text style={styles.summaryText}>Total: Rp {total}</Text>
-        <Text style={styles.summaryText}>Dibayar: Rp {bayar}</Text>
-        <Text style={styles.summaryText}>Kembalian: Rp {kembali}</Text>
+        <View style={styles.dottedLine} />
+
+        <View style={styles.summaryRow}>
+          <Text style={styles.label}>Total</Text>
+          <Text style={styles.value}>Rp {total.toLocaleString("id-ID")}</Text>
+        </View>
+        <View style={styles.summaryRow}>
+          <Text style={styles.label}>Dibayar</Text>
+          <Text style={styles.value}>Rp {bayar.toLocaleString("id-ID")}</Text>
+        </View>
+        <View style={styles.summaryRow}>
+          <Text style={styles.label}>Kembalian</Text>
+          <Text style={styles.value}>Rp {kembali.toLocaleString("id-ID")}</Text>
+        </View>
+
+        <View style={styles.dottedLine} />
+
+        <Text style={styles.thankyou}>🙏 Terima kasih atas pembeliannya!</Text>
       </View>
 
       <TouchableOpacity
         style={styles.button}
         onPress={() => router.replace("/kasir/penjualan")}
       >
-        <Text style={styles.buttonText}>🔄 Transaksi Baru</Text>
+        <Text style={styles.buttonText}>🔁 Transaksi Baru</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -68,54 +82,77 @@ export default function KwitansiScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 24,
+    padding: 20,
     alignItems: "center",
+    backgroundColor: "#f7f7f7",
+    flexGrow: 1,
+  },
+  receiptBox: {
+    width: "100%",
     backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
   },
   header: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "bold",
-    marginBottom: 10,
     color: "#008080",
+    textAlign: "center",
+    marginBottom: 6,
   },
   subText: {
+    textAlign: "center",
     fontSize: 14,
-    color: "#666",
+    color: "#444",
     marginBottom: 10,
   },
-  listContainer: {
-    width: "100%",
-    marginVertical: 10,
-    borderTopWidth: 1,
+  dottedLine: {
     borderBottomWidth: 1,
-    borderColor: "#ccc",
+    borderStyle: "dotted",
+    borderColor: "#aaa",
+    marginVertical: 10,
   },
   itemRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 8,
-    borderBottomWidth: 0.5,
-    borderColor: "#ccc",
+    marginVertical: 4,
   },
   itemName: {
     fontSize: 16,
+    color: "#333",
   },
   itemPrice: {
     fontSize: 16,
+    color: "#333",
   },
-  summary: {
-    marginVertical: 20,
-    width: "100%",
-  },
-  summaryText: {
-    fontSize: 18,
-    fontWeight: "bold",
+  summaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginVertical: 2,
-    textAlign: "right",
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#444",
+  },
+  value: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#111",
+  },
+  thankyou: {
+    textAlign: "center",
+    fontStyle: "italic",
+    marginTop: 14,
+    color: "#666",
   },
   button: {
     backgroundColor: "#008080",
-    paddingVertical: 14,
+    paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 10,
     marginTop: 20,
