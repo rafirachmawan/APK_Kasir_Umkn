@@ -119,7 +119,6 @@ export default function PenjualanScreen() {
     setUangBayar("");
     setTotal(0);
 
-    // Navigasi ke kwitansi
     router.push("/kasir/kwitansi");
   };
 
@@ -131,7 +130,9 @@ export default function PenjualanScreen() {
 
   return (
     <View style={styles.container}>
+      <Text style={styles.tokoName}>Toko Custom Name</Text>
       <Text style={styles.header}>Pilih Produk</Text>
+
       <FlatList
         data={produkList}
         keyExtractor={(item) => item.id}
@@ -159,6 +160,7 @@ export default function PenjualanScreen() {
           </TouchableOpacity>
         </View>
       ))}
+
       <Text style={styles.total}>
         Total: Rp {total.toLocaleString("id-ID")}
       </Text>
@@ -180,6 +182,13 @@ export default function PenjualanScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20 },
+  tokoName: {
+    fontSize: 20,
+    fontWeight: "bold",
+    textAlign: "center",
+    color: "#008080",
+    marginBottom: 6,
+  },
   header: { fontSize: 18, fontWeight: "bold", marginVertical: 10 },
   produkItem: {
     backgroundColor: "#e0f7f7",

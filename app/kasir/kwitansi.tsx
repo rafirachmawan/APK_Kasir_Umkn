@@ -37,6 +37,7 @@ export default function KwitansiScreen() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.receiptBox}>
+        <Text style={styles.tokoName}>Toko Custom Name</Text>
         <Text style={styles.header}>🧾 KWITANSI PENJUALAN</Text>
         <Text style={styles.subText}>Tanggal: {tanggal}</Text>
         <View style={styles.dottedLine} />
@@ -96,6 +97,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 6,
     elevation: 4,
+  },
+  tokoName: {
+    fontSize: 18,
+    fontWeight: "600",
+    textAlign: "center",
+    color: "#333",
+    marginBottom: 4,
   },
   header: {
     fontSize: 20,
