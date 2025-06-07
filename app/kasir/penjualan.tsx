@@ -1,10 +1,10 @@
-// File: app/kasir/penjualan.tsx
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
   FlatList,
+  Image,
   StyleSheet,
   Text,
   TextInput,
@@ -32,11 +32,25 @@ export default function PenjualanScreen() {
   const [total, setTotal] = useState(0);
 
   useEffect(() => {
-    // Dummy product
     const data: Produk[] = [
-      { id: "1", nama: "Kopi Hitam", harga: 8000 },
-      { id: "2", nama: "Teh Manis", harga: 6000 },
-      { id: "3", nama: "Susu Dingin", harga: 10000 },
+      {
+        id: "1",
+        nama: "Kopi Hitam",
+        harga: 8000,
+        gambar: "https://via.placeholder.com/100x100.png?text=Kopi",
+      },
+      {
+        id: "2",
+        nama: "Teh Manis",
+        harga: 6000,
+        gambar: "https://via.placeholder.com/100x100.png?text=Teh",
+      },
+      {
+        id: "3",
+        nama: "Susu Dingin",
+        harga: 10000,
+        gambar: "https://via.placeholder.com/100x100.png?text=Susu",
+      },
     ];
     setProdukList(data);
   }, []);
@@ -77,8 +91,8 @@ export default function PenjualanScreen() {
       "penjualan",
       JSON.stringify([...list, transaksi])
     );
-
     await AsyncStorage.setItem("lastKwitansi", JSON.stringify(transaksi));
+
     router.push("/kasir/kwitansi");
   };
 
@@ -94,6 +108,7 @@ export default function PenjualanScreen() {
             style={styles.produkItem}
             onPress={() => handleTambahProduk(item)}
           >
+            <Image source={{ uri: item.gambar }} style={styles.produkImage} />
             <Text style={styles.produkNama}>{item.nama}</Text>
             <Text style={styles.produkHarga}>Rp {item.harga}</Text>
           </TouchableOpacity>
@@ -129,7 +144,7 @@ export default function PenjualanScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20, flex: 1 },
+  container: { flex: 1, padding: 20 },
   header: { fontSize: 18, fontWeight: "bold", marginVertical: 10 },
   produkItem: {
     backgroundColor: "#e0f7f7",
@@ -139,6 +154,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
   },
+  produkImage: { width: 60, height: 60, marginBottom: 8, borderRadius: 8 },
   produkNama: { fontSize: 16 },
   produkHarga: { fontSize: 14, color: "#333" },
   input: {
