@@ -5,7 +5,6 @@ import {
   Alert,
   FlatList,
   Image,
-  ImageSourcePropType,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,13 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-
-interface Produk {
-  id: string;
-  nama: string;
-  harga: number;
-  gambar: ImageSourcePropType;
-}
+import { getProdukList, Produk } from "../../utils/produkManager";
 
 interface CartItem {
   id: string;
@@ -36,45 +29,11 @@ export default function PenjualanScreen() {
   const [namaPemesan, setNamaPemesan] = useState("");
 
   useEffect(() => {
-    const data: Produk[] = [
-      {
-        id: "1",
-        nama: "Kopi Hitam",
-        harga: 8000,
-        gambar: require("../../assets/images/kopi.jpg"),
-      },
-      {
-        id: "2",
-        nama: "Teh Manis",
-        harga: 6000,
-        gambar: require("../../assets/images/kopi.jpg"),
-      },
-      {
-        id: "3",
-        nama: "Susu Dingin",
-        harga: 10000,
-        gambar: require("../../assets/images/kopi.jpg"),
-      },
-      {
-        id: "4",
-        nama: "Roti Bakar",
-        harga: 12000,
-        gambar: require("../../assets/images/kopi.jpg"),
-      },
-      {
-        id: "5",
-        nama: "Air Mineral",
-        harga: 3000,
-        gambar: require("../../assets/images/kopi.jpg"),
-      },
-      {
-        id: "6",
-        nama: "Mie Instan",
-        harga: 7000,
-        gambar: require("../../assets/images/kopi.jpg"),
-      },
-    ];
-    setProdukList(data);
+    const loadProduk = async () => {
+      const list = await getProdukList();
+      setProdukList(list);
+    };
+    loadProduk();
   }, []);
 
   const tambahItem = (produk: Produk | CartItem) => {
@@ -159,7 +118,14 @@ export default function PenjualanScreen() {
               style={styles.productCard}
               onPress={() => tambahItem(item)}
             >
-              <Image source={item.gambar} style={styles.productImage} />
+              <Image
+                source={
+                  item.gambar
+                    ? { uri: item.gambar }
+                    : require("../../assets/images/kopi.jpg") // fallback dummy image
+                }
+                style={styles.productImage}
+              />
               <Text style={styles.productName}>{item.nama}</Text>
               <Text style={styles.productPrice}>
                 Rp {item.harga.toLocaleString()}
@@ -169,7 +135,7 @@ export default function PenjualanScreen() {
         />
       </View>
 
-      {/* Keranjang di bawah */}
+      {/* Keranjang */}
       <View style={styles.cartPanel}>
         <ScrollView style={{ maxHeight: 160 }}>
           {keranjang.map((item) => (
@@ -220,11 +186,7 @@ export default function PenjualanScreen() {
 }
 
 const styles = StyleSheet.create({
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 10,
-  },
+  sectionTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
   productCard: {
     backgroundColor: "white",
     borderRadius: 8,
