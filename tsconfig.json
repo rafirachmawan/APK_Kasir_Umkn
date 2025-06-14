@@ -2,13 +2,14 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
+    "baseUrl": ".", // Penting: untuk aktifkan alias
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@types/*": ["types/*"]
     }
   },
   "include": [
+    "types",
+    "app",
     "**/*.ts",
     "**/*.tsx",
     ".expo/types/**/*.ts",

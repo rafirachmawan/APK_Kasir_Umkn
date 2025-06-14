@@ -1,9 +1,7 @@
-// File: app/auth/login.tsx
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  Alert,
   StyleSheet,
   Text,
   TextInput,
@@ -11,90 +9,77 @@ import {
   View,
 } from "react-native";
 
+const users = [
+  { username: "admin", password: "admin", role: "admin_umkm" },
+  { username: "kasir", password: "kasir", role: "kasir_umkm" },
+  { username: "dev", password: "dev", role: "developer" },
+];
+
 export default function LoginScreen() {
-  const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const router = useRouter();
 
   useEffect(() => {
-    const check = async () => {
-      const isLoggedIn = await AsyncStorage.getItem("userLoggedIn");
-      const role = await AsyncStorage.getItem("userRole");
-      if (isLoggedIn === "true" && role) {
-        router.replace(
-          role === "admin" ? "/admin/dashboard" : "/kasir/penjualan"
-        );
+    const cekLogin = async () => {
+      const data = await AsyncStorage.getItem("user");
+      if (data) {
+        const user = JSON.parse(data);
+        if (user.role === "kasir_umkm") router.replace("/kasir/penjualan");
+        else router.replace("/admin/dashboard");
       }
     };
-    check();
+    cekLogin();
   }, []);
 
-  const handleLogin = async () => {
-    if (username === "admin" && password === "admin") {
-      await AsyncStorage.setItem("userLoggedIn", "true");
-      await AsyncStorage.setItem("userRole", "admin");
-      router.replace("/admin/dashboard");
-    } else if (username === "kasir" && password === "kasir") {
-      await AsyncStorage.setItem("userLoggedIn", "true");
-      await AsyncStorage.setItem("userRole", "kasir");
-      router.replace("/kasir/penjualan");
-    } else {
-      Alert.alert("Login Gagal", "Username atau password salah.");
-    }
+  const login = async () => {
+    const user = users.find(
+      (u) => u.username === username && u.password === password
+    );
+    if (!user) return alert("Login gagal");
+    await AsyncStorage.setItem("user", JSON.stringify(user));
+    if (user.role === "kasir_umkm") router.replace("/kasir/penjualan");
+    else router.replace("/admin/dashboard");
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Login</Text>
+      <Text style={styles.title}>Login Kasir UMKM</Text>
       <TextInput
         placeholder="Username"
+        style={styles.input}
         value={username}
         onChangeText={setUsername}
-        style={styles.input}
       />
       <TextInput
         placeholder="Password"
+        style={styles.input}
         value={password}
         onChangeText={setPassword}
         secureTextEntry
-        style={styles.input}
       />
-      <TouchableOpacity onPress={handleLogin} style={styles.button}>
-        <Text style={styles.buttonText}>Masuk</Text>
+      <TouchableOpacity style={styles.button} onPress={login}>
+        <Text style={styles.buttonText}>Login</Text>
       </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
+  container: { flex: 1, justifyContent: "center", padding: 20 },
   title: {
     fontSize: 24,
+    fontWeight: "bold",
     marginBottom: 20,
+    textAlign: "center",
   },
   input: {
-    width: "100%",
     borderWidth: 1,
     borderColor: "#ccc",
-    padding: 12,
-    marginVertical: 8,
-    borderRadius: 6,
+    padding: 10,
+    marginBottom: 10,
+    borderRadius: 8,
   },
-  button: {
-    backgroundColor: "#008080",
-    padding: 14,
-    borderRadius: 6,
-    marginTop: 10,
-    width: "100%",
-    alignItems: "center",
-  },
-  buttonText: {
-    color: "white",
-    fontWeight: "bold",
-  },
+  button: { backgroundColor: "#007bff", padding: 15, borderRadius: 8 },
+  buttonText: { color: "white", textAlign: "center", fontWeight: "bold" },
 });
