@@ -1,40 +1,11 @@
-// AdminDashboard dengan Sliding Sidebar & Overlay
+// AdminDashboard dengan Bottom Drawer Tabs
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import { useState } from "react";
-import {
-  Animated,
-  Dimensions,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
-} from "react-native";
-
-const screenWidth = Dimensions.get("window").width;
+import React from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const sidebarAnim = useState(new Animated.Value(-250))[0];
-
-  const toggleSidebar = () => {
-    Animated.timing(sidebarAnim, {
-      toValue: sidebarOpen ? -250 : 0,
-      duration: 300,
-      useNativeDriver: false,
-    }).start();
-    setSidebarOpen(!sidebarOpen);
-  };
-
-  const closeSidebar = () => {
-    Animated.timing(sidebarAnim, {
-      toValue: -250,
-      duration: 300,
-      useNativeDriver: false,
-    }).start(() => setSidebarOpen(false));
-  };
 
   const logout = async () => {
     await AsyncStorage.removeItem("user");
@@ -43,109 +14,49 @@ export default function AdminDashboard() {
 
   return (
     <View style={{ flex: 1 }}>
-      {/* Overlay */}
-      {sidebarOpen && (
-        <TouchableWithoutFeedback onPress={closeSidebar}>
-          <View style={styles.overlay} />
-        </TouchableWithoutFeedback>
-      )}
+      <View style={styles.mainContent}>
+        <Text style={styles.title}>Dashboard Admin UMKM</Text>
+        <Text style={styles.subtext}>Silakan pilih menu di bawah.</Text>
+      </View>
 
-      {/* Sidebar Slide */}
-      <Animated.View style={[styles.sidebar, { left: sidebarAnim }]}>
-        <Text style={styles.logo}>KASIRO</Text>
-
+      {/* Bottom Drawer Tab */}
+      <View style={styles.bottomNav}>
         <TouchableOpacity
-          onPress={() => router.push("/admin/produk")}
-          style={styles.menuItem}
+          onPress={() => router.replace("/admin/dashboard")}
+          style={styles.navItem}
         >
-          <Text style={styles.menuText}>Kelola Produk</Text>
+          <Text style={styles.navText}>Dashboard</Text>
         </TouchableOpacity>
-
         <TouchableOpacity
-          onPress={() => router.push("/admin/laporan")}
-          style={styles.menuItem}
+          onPress={() => router.replace("/admin/produk")}
+          style={styles.navItem}
         >
-          <Text style={styles.menuText}>Laporan Penjualan</Text>
+          <Text style={styles.navText}>Produk</Text>
         </TouchableOpacity>
-
+        <TouchableOpacity
+          onPress={() => router.replace("/admin/laporan")}
+          style={styles.navItem}
+        >
+          <Text style={styles.navText}>Laporan</Text>
+        </TouchableOpacity>
         <TouchableOpacity
           onPress={logout}
-          style={[styles.menuItem, { marginTop: 30, backgroundColor: "red" }]}
+          style={[styles.navItem, { backgroundColor: "red" }]}
         >
-          <Text style={[styles.menuText, { color: "white" }]}>Logout</Text>
+          <Text style={[styles.navText, { color: "white" }]}>Logout</Text>
         </TouchableOpacity>
-      </Animated.View>
-
-      {/* Konten utama */}
-      <View style={styles.mainContent}>
-        <TouchableOpacity onPress={toggleSidebar} style={styles.toggleButton}>
-          <Text style={styles.toggleText}>{sidebarOpen ? "✕" : "☰"}</Text>
-        </TouchableOpacity>
-
-        <Text style={styles.title}>Dashboard Admin UMKM</Text>
-        <Text style={styles.subtext}>Silakan pilih menu di sidebar.</Text>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  sidebar: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    width: 250,
-    backgroundColor: "#fff",
-    padding: 20,
-    borderRightWidth: 1,
-    borderColor: "#ccc",
-    zIndex: 10,
-    elevation: 4,
-  },
-  overlay: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    zIndex: 5,
-  },
-  logo: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#007AFF",
-    marginBottom: 30,
-  },
-  menuItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderRadius: 6,
-    backgroundColor: "#f0f0f0",
-    marginBottom: 10,
-  },
-  menuText: {
-    fontSize: 16,
-  },
   mainContent: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
-  },
-  toggleButton: {
-    position: "absolute",
-    top: 40,
-    left: 20,
-    zIndex: 20,
-    backgroundColor: "#007AFF",
-    padding: 10,
-    borderRadius: 20,
-  },
-  toggleText: {
-    color: "white",
-    fontSize: 20,
-    fontWeight: "bold",
+    backgroundColor: "#fff",
   },
   title: {
     fontSize: 22,
@@ -156,5 +67,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
     textAlign: "center",
+  },
+  bottomNav: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderColor: "#ddd",
+    backgroundColor: "#f9f9f9",
+  },
+  navItem: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: "#eee",
+  },
+  navText: {
+    fontSize: 14,
+    fontWeight: "bold",
   },
 });
