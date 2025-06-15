@@ -1,4 +1,3 @@
-// Riwayat Transaksi Kasir - Tampilkan Daftar Kwitansi dari AsyncStorage
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -10,11 +9,19 @@ import {
   View,
 } from "react-native";
 
+interface Item {
+  id: string;
+  nama: string;
+  harga: string;
+}
+
 interface Transaksi {
   id: string;
   total: number;
-  items: { nama: string; harga: string }[];
+  items: Item[];
   waktu: string;
+  uangBayar: number;
+  kembali: number;
 }
 
 export default function RiwayatKwitansi() {
@@ -29,24 +36,38 @@ export default function RiwayatKwitansi() {
     ambilData();
   }, []);
 
+  const groupItems = (items: Item[]) => {
+    const result: { nama: string; harga: string; qty: number }[] = [];
+    items.forEach((item) => {
+      const existing = result.find(
+        (i) => i.nama === item.nama && i.harga === item.harga
+      );
+      if (existing) existing.qty += 1;
+      else result.push({ nama: item.nama, harga: item.harga, qty: 1 });
+    });
+    return result;
+  };
+
   return (
     <View style={{ flex: 1 }}>
       <View style={styles.container}>
         <Text style={styles.title}>Riwayat Transaksi</Text>
         <FlatList
-          data={riwayat}
+          data={riwayat.reverse()}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <View style={styles.card}>
               <Text style={styles.time}>{item.waktu}</Text>
-              {item.items.map((itm, idx) => (
+              {groupItems(item.items).map((itm, idx) => (
                 <Text key={idx}>
-                  {itm.nama} - Rp{itm.harga}
+                  {itm.nama} x{itm.qty} - Rp{parseInt(itm.harga) * itm.qty}
                 </Text>
               ))}
-              <Text style={{ fontWeight: "bold", marginTop: 5 }}>
+              <Text style={{ fontWeight: "bold", marginTop: 6 }}>
                 Total: Rp{item.total}
               </Text>
+              <Text>Uang Bayar: Rp{item.uangBayar}</Text>
+              <Text>Kembalian: Rp{item.kembali}</Text>
             </View>
           )}
           ListEmptyComponent={

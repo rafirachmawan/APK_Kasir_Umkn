@@ -1,13 +1,15 @@
-// Kasir Penjualan - Simpan Transaksi, Tampilkan Kwitansi & Kirim via WhatsApp + Tampilkan Produk Per Kategori
+// Kasir Penjualan - Versi Final dengan Gambar, Keranjang Unik, Uang Bayar & WhatsApp + Hapus Item per Group
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
+  FlatList,
+  Image,
   Linking,
-  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -17,6 +19,7 @@ interface Produk {
   nama: string;
   harga: string;
   kategori?: "makanan" | "minuman" | "cemilan";
+  gambar?: string;
 }
 
 interface Transaksi {
@@ -24,12 +27,15 @@ interface Transaksi {
   total: number;
   items: Produk[];
   waktu: string;
+  uangBayar: number;
+  kembali: number;
 }
 
 export default function KasirPenjualan() {
   const router = useRouter();
   const [produkList, setProdukList] = useState<Produk[]>([]);
   const [keranjang, setKeranjang] = useState<Produk[]>([]);
+  const [uangBayar, setUangBayar] = useState("");
   const [lastKwitansi, setLastKwitansi] = useState<Transaksi | null>(null);
 
   useEffect(() => {
@@ -51,9 +57,8 @@ export default function KasirPenjualan() {
     setKeranjang([...keranjang, item]);
   };
 
-  const hapusDariKeranjang = (index: number) => {
-    const updated = [...keranjang];
-    updated.splice(index, 1);
+  const hapusSemuaItemByNama = (nama: string) => {
+    const updated = keranjang.filter((item) => item.nama !== nama);
     setKeranjang(updated);
   };
 
@@ -62,14 +67,21 @@ export default function KasirPenjualan() {
     0
   );
 
+  const kembali = parseInt(uangBayar || "0") - totalHarga;
+
   const simpanTransaksi = async () => {
     if (keranjang.length === 0) return Alert.alert("Keranjang kosong");
+    if (!uangBayar || parseInt(uangBayar) < totalHarga) {
+      return Alert.alert("Uang bayar tidak cukup");
+    }
 
     const transaksiBaru: Transaksi = {
       id: Date.now().toString(),
       total: totalHarga,
       items: keranjang,
       waktu: new Date().toLocaleString("id-ID"),
+      uangBayar: parseInt(uangBayar),
+      kembali,
     };
 
     try {
@@ -79,6 +91,7 @@ export default function KasirPenjualan() {
       await AsyncStorage.setItem("riwayatTransaksi", JSON.stringify(updated));
       setLastKwitansi(transaksiBaru);
       setKeranjang([]);
+      setUangBayar("");
       Alert.alert("Transaksi disimpan", `Total: Rp${totalHarga}`);
     } catch (error) {
       Alert.alert("Gagal menyimpan transaksi");
@@ -90,7 +103,7 @@ export default function KasirPenjualan() {
       `🧾 *Kwitansi Penjualan*\n` +
       `Waktu: ${trx.waktu}\n` +
       trx.items.map((item) => `- ${item.nama}: Rp${item.harga}`).join("\n") +
-      `\n\nTotal: *Rp${trx.total}*`;
+      `\n\nTotal: *Rp${trx.total}*\nUang Bayar: Rp${trx.uangBayar}\nKembali: Rp${trx.kembali}`;
 
     const pesanEncoded = encodeURIComponent(isiPesan);
     const link = `https://wa.me/?text=${pesanEncoded}`;
@@ -102,90 +115,121 @@ export default function KasirPenjualan() {
     router.replace("/auth/login");
   };
 
-  const kategoriList: Produk["kategori"][] = ["makanan", "minuman", "cemilan"];
+  const keranjangGrouped = Object.values(
+    keranjang.reduce((acc, item) => {
+      const key = item.nama;
+      if (!acc[key]) {
+        acc[key] = { ...item, qty: 1 };
+      } else {
+        acc[key].qty += 1;
+      }
+      return acc;
+    }, {} as { [key: string]: Produk & { qty: number } })
+  );
 
   return (
     <View style={{ flex: 1 }}>
-      <ScrollView style={styles.container}>
-        <Text style={styles.title}>Pilih Produk</Text>
-
-        {kategoriList.map((kategori) => {
-          const dataKategori = produkList.filter(
-            (p) => p.kategori === kategori
-          );
-          if (dataKategori.length === 0) return null;
-          return (
-            <View key={kategori} style={{ marginBottom: 12 }}>
-              <Text style={{ fontWeight: "bold", marginBottom: 6 }}>
-                {typeof kategori === "string" ? kategori.toUpperCase() : ""}
-              </Text>
-              {dataKategori.map((item) => (
-                <TouchableOpacity
-                  key={item.id}
-                  onPress={() => tambahKeKeranjang(item)}
-                  style={styles.produkItem}
-                >
-                  <Text>
-                    {item.nama} - Rp{item.harga}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          );
-        })}
-
-        <Text style={styles.title}>Keranjang</Text>
-        {keranjang.length === 0 ? (
-          <Text style={{ marginTop: 10 }}>Belum ada item di keranjang.</Text>
-        ) : (
-          keranjang.map((item, index) => (
-            <View key={index} style={styles.keranjangItem}>
-              <Text>
-                {item.nama} - Rp{item.harga}
-              </Text>
-              <TouchableOpacity onPress={() => hapusDariKeranjang(index)}>
-                <Text style={styles.hapus}>Hapus</Text>
-              </TouchableOpacity>
-            </View>
-          ))
+      <FlatList
+        data={produkList}
+        keyExtractor={(item) => item.id}
+        numColumns={2}
+        contentContainerStyle={styles.container}
+        ListHeaderComponent={<Text style={styles.title}>Pilih Produk</Text>}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            onPress={() => tambahKeKeranjang(item)}
+            style={styles.card}
+          >
+            {item.gambar && (
+              <Image source={{ uri: item.gambar }} style={styles.image} />
+            )}
+            <Text style={styles.nama}>{item.nama}</Text>
+            <Text style={styles.harga}>Rp{item.harga}</Text>
+          </TouchableOpacity>
         )}
-
-        <Text style={{ marginTop: 10, fontWeight: "bold" }}>
-          Total: Rp{totalHarga}
-        </Text>
-
-        <TouchableOpacity onPress={simpanTransaksi} style={styles.checkoutBtn}>
-          <Text style={{ color: "white", textAlign: "center" }}>
-            Simpan Transaksi
-          </Text>
-        </TouchableOpacity>
-
-        {lastKwitansi && (
-          <View style={styles.kwitansi}>
-            <Text style={styles.kwitansiTitle}>Kwitansi</Text>
-            <Text>Waktu: {lastKwitansi.waktu}</Text>
-            {lastKwitansi.items.map((item, idx) => (
-              <Text key={idx}>
-                - {item.nama}: Rp{item.harga}
+        ListFooterComponent={
+          <>
+            <Text style={styles.title}>Keranjang</Text>
+            {keranjangGrouped.length === 0 ? (
+              <Text style={{ marginTop: 10 }}>
+                Belum ada item di keranjang.
               </Text>
-            ))}
-            <Text style={{ fontWeight: "bold", marginTop: 5 }}>
-              Total: Rp{lastKwitansi.total}
+            ) : (
+              keranjangGrouped.map((item, index) => (
+                <View key={index} style={styles.keranjangItem}>
+                  <Text>
+                    {item.nama} x{item.qty} - Rp
+                    {parseInt(item.harga) * item.qty}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => hapusSemuaItemByNama(item.nama)}
+                  >
+                    <Text style={styles.hapus}>Hapus</Text>
+                  </TouchableOpacity>
+                </View>
+              ))
+            )}
+
+            <Text style={{ marginTop: 10, fontWeight: "bold" }}>
+              Total: Rp{totalHarga}
+            </Text>
+
+            <TextInput
+              placeholder="Uang Bayar"
+              keyboardType="numeric"
+              value={uangBayar}
+              onChangeText={setUangBayar}
+              style={{
+                borderWidth: 1,
+                borderColor: "#ccc",
+                borderRadius: 8,
+                padding: 10,
+                marginTop: 10,
+              }}
+            />
+
+            <Text style={{ marginTop: 6 }}>
+              Kembalian: Rp{isNaN(kembali) ? 0 : kembali}
             </Text>
 
             <TouchableOpacity
-              onPress={() => kirimWhatsapp(lastKwitansi)}
-              style={styles.waBtn}
+              onPress={simpanTransaksi}
+              style={styles.checkoutBtn}
             >
               <Text style={{ color: "white", textAlign: "center" }}>
-                Kirim via WhatsApp
+                Simpan Transaksi
               </Text>
             </TouchableOpacity>
-          </View>
-        )}
-      </ScrollView>
 
-      {/* Bottom Navigation */}
+            {lastKwitansi && (
+              <View style={styles.kwitansi}>
+                <Text style={styles.kwitansiTitle}>Kwitansi</Text>
+                <Text>Waktu: {lastKwitansi.waktu}</Text>
+                {lastKwitansi.items.map((item, idx) => (
+                  <Text key={idx}>
+                    - {item.nama}: Rp{item.harga}
+                  </Text>
+                ))}
+                <Text style={{ fontWeight: "bold", marginTop: 5 }}>
+                  Total: Rp{lastKwitansi.total}
+                </Text>
+                <Text>Uang Bayar: Rp{lastKwitansi.uangBayar}</Text>
+                <Text>Kembali: Rp{lastKwitansi.kembali}</Text>
+
+                <TouchableOpacity
+                  onPress={() => kirimWhatsapp(lastKwitansi)}
+                  style={styles.waBtn}
+                >
+                  <Text style={{ color: "white", textAlign: "center" }}>
+                    Kirim via WhatsApp
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </>
+        }
+      />
+
       <View style={styles.bottomNav}>
         <TouchableOpacity
           onPress={() => router.replace("/kasir/penjualan")}
@@ -211,13 +255,34 @@ export default function KasirPenjualan() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#fff" },
-  title: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
-  produkItem: {
-    padding: 12,
-    backgroundColor: "#f2f2f2",
-    borderRadius: 6,
+  container: { padding: 16, backgroundColor: "#fff" },
+  title: { fontSize: 18, fontWeight: "bold", marginBottom: 12 },
+  card: {
+    flex: 1,
+    backgroundColor: "#fff",
+    margin: 8,
+    borderRadius: 10,
+    padding: 10,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  image: {
+    width: 80,
+    height: 80,
+    borderRadius: 10,
     marginBottom: 8,
+  },
+  nama: {
+    fontWeight: "bold",
+    fontSize: 14,
+    textAlign: "center",
+  },
+  harga: {
+    fontSize: 13,
+    color: "#555",
   },
   keranjangItem: {
     flexDirection: "row",
