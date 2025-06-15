@@ -44,7 +44,7 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Login Kasir UMKM</Text>
+      <Text style={styles.title}>KASIRO</Text>
       <TextInput
         placeholder="Username"
         style={styles.input}
