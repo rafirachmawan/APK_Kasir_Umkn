@@ -1,10 +1,11 @@
-// Kasir Penjualan - Tambah & Hapus dari Keranjang
+// Kasir Penjualan - Simpan Transaksi, Tampilkan Kwitansi & Kirim via WhatsApp + Tampilkan Produk Per Kategori
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
-  FlatList,
+  Linking,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -15,17 +16,33 @@ interface Produk {
   id: string;
   nama: string;
   harga: string;
+  kategori?: "makanan" | "minuman" | "cemilan";
+}
+
+interface Transaksi {
+  id: string;
+  total: number;
+  items: Produk[];
+  waktu: string;
 }
 
 export default function KasirPenjualan() {
   const router = useRouter();
   const [produkList, setProdukList] = useState<Produk[]>([]);
   const [keranjang, setKeranjang] = useState<Produk[]>([]);
+  const [lastKwitansi, setLastKwitansi] = useState<Transaksi | null>(null);
 
   useEffect(() => {
     const ambilProduk = async () => {
       const data = await AsyncStorage.getItem("produkList");
-      if (data) setProdukList(JSON.parse(data));
+      if (data) {
+        const parsed = JSON.parse(data);
+        const withKategori = parsed.map((p: any) => ({
+          ...p,
+          kategori: p.kategori ?? "makanan",
+        }));
+        setProdukList(withKategori);
+      }
     };
     ambilProduk();
   }, []);
@@ -48,7 +65,7 @@ export default function KasirPenjualan() {
   const simpanTransaksi = async () => {
     if (keranjang.length === 0) return Alert.alert("Keranjang kosong");
 
-    const transaksiBaru = {
+    const transaksiBaru: Transaksi = {
       id: Date.now().toString(),
       total: totalHarga,
       items: keranjang,
@@ -60,6 +77,7 @@ export default function KasirPenjualan() {
       const dataArray = dataLama ? JSON.parse(dataLama) : [];
       const updated = [...dataArray, transaksiBaru];
       await AsyncStorage.setItem("riwayatTransaksi", JSON.stringify(updated));
+      setLastKwitansi(transaksiBaru);
       setKeranjang([]);
       Alert.alert("Transaksi disimpan", `Total: Rp${totalHarga}`);
     } catch (error) {
@@ -67,33 +85,54 @@ export default function KasirPenjualan() {
     }
   };
 
+  const kirimWhatsapp = (trx: Transaksi) => {
+    const isiPesan =
+      `🧾 *Kwitansi Penjualan*\n` +
+      `Waktu: ${trx.waktu}\n` +
+      trx.items.map((item) => `- ${item.nama}: Rp${item.harga}`).join("\n") +
+      `\n\nTotal: *Rp${trx.total}*`;
+
+    const pesanEncoded = encodeURIComponent(isiPesan);
+    const link = `https://wa.me/?text=${pesanEncoded}`;
+    Linking.openURL(link);
+  };
+
   const logout = async () => {
     await AsyncStorage.removeItem("user");
     router.replace("/auth/login");
   };
 
+  const kategoriList: Produk["kategori"][] = ["makanan", "minuman", "cemilan"];
+
   return (
     <View style={{ flex: 1 }}>
-      <View style={styles.container}>
+      <ScrollView style={styles.container}>
         <Text style={styles.title}>Pilih Produk</Text>
 
-        <FlatList
-          data={produkList}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              onPress={() => tambahKeKeranjang(item)}
-              style={styles.produkItem}
-            >
-              <Text>
-                {item.nama} - Rp{item.harga}
+        {kategoriList.map((kategori) => {
+          const dataKategori = produkList.filter(
+            (p) => p.kategori === kategori
+          );
+          if (dataKategori.length === 0) return null;
+          return (
+            <View key={kategori} style={{ marginBottom: 12 }}>
+              <Text style={{ fontWeight: "bold", marginBottom: 6 }}>
+                {typeof kategori === "string" ? kategori.toUpperCase() : ""}
               </Text>
-            </TouchableOpacity>
-          )}
-          ListEmptyComponent={
-            <Text style={{ marginTop: 10 }}>Belum ada produk.</Text>
-          }
-        />
+              {dataKategori.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  onPress={() => tambahKeKeranjang(item)}
+                  style={styles.produkItem}
+                >
+                  <Text>
+                    {item.nama} - Rp{item.harga}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          );
+        })}
 
         <Text style={styles.title}>Keranjang</Text>
         {keranjang.length === 0 ? (
@@ -120,7 +159,31 @@ export default function KasirPenjualan() {
             Simpan Transaksi
           </Text>
         </TouchableOpacity>
-      </View>
+
+        {lastKwitansi && (
+          <View style={styles.kwitansi}>
+            <Text style={styles.kwitansiTitle}>Kwitansi</Text>
+            <Text>Waktu: {lastKwitansi.waktu}</Text>
+            {lastKwitansi.items.map((item, idx) => (
+              <Text key={idx}>
+                - {item.nama}: Rp{item.harga}
+              </Text>
+            ))}
+            <Text style={{ fontWeight: "bold", marginTop: 5 }}>
+              Total: Rp{lastKwitansi.total}
+            </Text>
+
+            <TouchableOpacity
+              onPress={() => kirimWhatsapp(lastKwitansi)}
+              style={styles.waBtn}
+            >
+              <Text style={{ color: "white", textAlign: "center" }}>
+                Kirim via WhatsApp
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </ScrollView>
 
       {/* Bottom Navigation */}
       <View style={styles.bottomNav}>
@@ -170,6 +233,23 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     marginTop: 10,
+  },
+  kwitansi: {
+    marginTop: 20,
+    padding: 12,
+    backgroundColor: "#e0f7fa",
+    borderRadius: 8,
+  },
+  kwitansiTitle: {
+    fontWeight: "bold",
+    fontSize: 16,
+    marginBottom: 6,
+  },
+  waBtn: {
+    marginTop: 10,
+    backgroundColor: "#25D366",
+    padding: 10,
+    borderRadius: 8,
   },
   bottomNav: {
     flexDirection: "row",
