@@ -1,65 +1,74 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { useState } from "react";
 import {
+  Alert,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-
-const users = [
-  { username: "admin", password: "admin", role: "admin_umkm" },
-  { username: "kasir", password: "kasir", role: "kasir_umkm" },
-  { username: "dev", password: "dev", role: "developer" },
-];
+import { db } from "../../utils/firebase";
 
 export default function LoginScreen() {
+  const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const router = useRouter();
-
-  useEffect(() => {
-    const cekLogin = async () => {
-      const data = await AsyncStorage.getItem("user");
-      if (data) {
-        const user = JSON.parse(data);
-        if (user.role === "kasir_umkm") router.replace("/kasir/penjualan");
-        else router.replace("/admin/dashboard");
-      }
-    };
-    cekLogin();
-  }, []);
 
   const login = async () => {
-    const user = users.find(
-      (u) => u.username === username && u.password === password
-    );
-    if (!user) return alert("Login gagal");
-    await AsyncStorage.setItem("user", JSON.stringify(user));
-    if (user.role === "kasir_umkm") router.replace("/kasir/penjualan");
-    else router.replace("/admin/dashboard");
+    if (!username || !password) {
+      return Alert.alert("Isi semua data");
+    }
+
+    try {
+      const q = query(
+        collection(db, "users"),
+        where("username", "==", username)
+      );
+      const snapshot = await getDocs(q);
+
+      if (snapshot.empty) return Alert.alert("Akun tidak ditemukan");
+
+      const user = snapshot.docs[0].data();
+      if (user.password !== password) {
+        return Alert.alert("Password salah");
+      }
+
+      // Simpan user ke AsyncStorage
+      await AsyncStorage.setItem("user", JSON.stringify(user));
+
+      // Redirect sesuai role
+      if (user.role === "developer") router.replace("/developer");
+      else if (user.role === "admin") router.replace("/admin/dashboard");
+      else if (user.role === "kasir") router.replace("/kasir/penjualan");
+      else Alert.alert("Role tidak dikenali");
+    } catch (err) {
+      Alert.alert("Login gagal", String(err));
+    }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>KASIRO</Text>
+      <Text style={styles.title}>Login Kasir UMKM</Text>
+
       <TextInput
         placeholder="Username"
-        style={styles.input}
         value={username}
         onChangeText={setUsername}
+        style={styles.input}
       />
       <TextInput
         placeholder="Password"
-        style={styles.input}
         value={password}
         onChangeText={setPassword}
         secureTextEntry
+        style={styles.input}
       />
-      <TouchableOpacity style={styles.button} onPress={login}>
-        <Text style={styles.buttonText}>Login</Text>
+
+      <TouchableOpacity onPress={login} style={styles.button}>
+        <Text style={styles.buttonText}>Masuk</Text>
       </TouchableOpacity>
     </View>
   );
@@ -70,16 +79,20 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: "bold",
-    marginBottom: 20,
+    marginBottom: 24,
     textAlign: "center",
   },
   input: {
     borderWidth: 1,
     borderColor: "#ccc",
-    padding: 10,
-    marginBottom: 10,
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  button: {
+    backgroundColor: "#28a745",
+    padding: 14,
     borderRadius: 8,
   },
-  button: { backgroundColor: "#007bff", padding: 15, borderRadius: 8 },
   buttonText: { color: "white", textAlign: "center", fontWeight: "bold" },
 });
