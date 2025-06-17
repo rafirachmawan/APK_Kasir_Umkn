@@ -1,11 +1,20 @@
-// KelolaProduk - Tambah Kategori & Gambar Produk + Grup Berdasarkan Kategori
+// ✅ Kelola Produk - Versi Admin: Produk Berdasarkan tokoId Login + Bottom Bar
+
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  query,
+  where,
+} from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
-  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,67 +22,93 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { db } from "../../../utils/firebase";
 
 interface Produk {
   id: string;
   nama: string;
   harga: string;
-  kategori: "makanan" | "minuman" | "cemilan";
+  kategori: string;
   gambar?: string;
+  tokoId: string;
 }
 
-export default function KelolaProduk() {
-  const router = useRouter();
+const kategoriList = ["MAKANAN", "MINUMAN", "CEMILAN"];
+
+export default function ProdukAdmin() {
   const [nama, setNama] = useState("");
   const [harga, setHarga] = useState("");
-  const [kategori, setKategori] = useState<Produk["kategori"]>("makanan");
+  const [kategori, setKategori] = useState("MAKANAN");
   const [gambar, setGambar] = useState<string | undefined>(undefined);
   const [produkList, setProdukList] = useState<Produk[]>([]);
+  const [tokoId, setTokoId] = useState("");
+  const [tab, setTab] = useState<"produk" | "laporan">("produk");
+  const router = useRouter();
 
   useEffect(() => {
-    AsyncStorage.getItem("produkList").then((data) => {
-      if (data) {
-        const parsed = JSON.parse(data);
-        const fixed = parsed.map((p: any) => ({
-          ...p,
-          kategori: p.kategori ?? "makanan",
-        }));
-        setProdukList(fixed);
-      }
-    });
+    const init = async () => {
+      const userStr = await AsyncStorage.getItem("user");
+      if (!userStr) return Alert.alert("Error", "User belum login");
+      const user = JSON.parse(userStr);
+      setTokoId(user.tokoId);
+      await ambilProduk(user.tokoId);
+    };
+    init();
   }, []);
+
+  const ambilProduk = async (tokoId: string) => {
+    const q = query(collection(db, "produk"), where("tokoId", "==", tokoId));
+    const snapshot = await getDocs(q);
+    const data = snapshot.docs.map(
+      (doc) => ({ id: doc.id, ...doc.data() } as Produk)
+    );
+    setProdukList(data);
+  };
 
   const pilihGambar = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.7,
     });
     if (!result.canceled && result.assets.length > 0) {
       setGambar(result.assets[0].uri);
     }
   };
 
-  const simpanProduk = async () => {
-    if (!nama || !harga) return Alert.alert("Wajib isi nama dan harga");
-    const newProduk: Produk = {
-      id: Date.now().toString(),
-      nama,
-      harga,
-      kategori,
-      gambar,
-    };
-    const updated = [...produkList, newProduk];
-    setProdukList(updated);
-    await AsyncStorage.setItem("produkList", JSON.stringify(updated));
-    setNama("");
-    setHarga("");
-    setGambar(undefined);
+  const tambahProduk = async () => {
+    if (!nama || !harga || !kategori) {
+      return Alert.alert("Lengkapi semua input");
+    }
+
+    if (!tokoId) {
+      console.log("❌ tokoId kosong saat tambah produk!");
+      return Alert.alert("Error", "Toko ID belum dimuat, coba ulangi.");
+    }
+
+    try {
+      const newProduk: any = {
+        nama,
+        harga,
+        kategori,
+        tokoId,
+      };
+      if (gambar) newProduk.gambar = gambar;
+
+      await addDoc(collection(db, "produk"), newProduk);
+
+      Alert.alert("Berhasil", "Produk ditambahkan");
+      setNama("");
+      setHarga("");
+      setGambar(undefined);
+      await ambilProduk(tokoId);
+    } catch (err: any) {
+      console.error("❌ Gagal menyimpan produk:", err.message || err);
+      Alert.alert("Gagal", "Gagal menyimpan produk");
+    }
   };
 
   const hapusProduk = async (id: string) => {
-    const filtered = produkList.filter((p) => p.id !== id);
-    setProdukList(filtered);
-    await AsyncStorage.setItem("produkList", JSON.stringify(filtered));
+    await deleteDoc(doc(db, "produk", id));
+    ambilProduk();
   };
 
   const logout = async () => {
@@ -81,12 +116,11 @@ export default function KelolaProduk() {
     router.replace("/auth/login");
   };
 
-  const kategoriList: Produk["kategori"][] = ["makanan", "minuman", "cemilan"];
-
   return (
     <View style={{ flex: 1 }}>
       <ScrollView style={styles.container}>
         <Text style={styles.title}>Kelola Produk</Text>
+
         <TextInput
           placeholder="Nama Produk"
           value={nama}
@@ -100,73 +134,49 @@ export default function KelolaProduk() {
           keyboardType="numeric"
           style={styles.input}
         />
-        <Text style={{ marginBottom: 5 }}>Kategori:</Text>
-        <View style={styles.kategoriWrapper}>
+
+        <Text style={{ fontWeight: "bold", marginBottom: 6 }}>Kategori:</Text>
+        <View style={styles.kategoriRow}>
           {kategoriList.map((k) => (
             <TouchableOpacity
               key={k}
-              onPress={() => setKategori(k)}
               style={[
                 styles.kategoriBtn,
-                kategori === k && styles.kategoriActive,
+                kategori === k && styles.kategoriAktif,
               ]}
+              onPress={() => setKategori(k)}
             >
-              <Text style={kategori === k ? { color: "white" } : {}}>
-                {k.toUpperCase()}
+              <Text style={{ color: kategori === k ? "white" : "black" }}>
+                {k}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        <TouchableOpacity onPress={pilihGambar} style={styles.pilihGambarBtn}>
-          <Text style={{ color: "white", textAlign: "center" }}>
-            Pilih Gambar
+        <TouchableOpacity onPress={pilihGambar} style={styles.gambarBtn}>
+          <Text style={{ color: "white" }}>Pilih Gambar</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={tambahProduk} style={styles.tambahBtn}>
+          <Text style={{ color: "white", fontWeight: "bold" }}>
+            Tambah Produk
           </Text>
         </TouchableOpacity>
-        {gambar && (
-          <Image
-            source={{ uri: gambar }}
-            style={{ width: 100, height: 100, marginVertical: 10 }}
-          />
-        )}
 
-        <TouchableOpacity onPress={simpanProduk} style={styles.button}>
-          <Text style={styles.btnText}>Tambah Produk</Text>
-        </TouchableOpacity>
-
-        <Text style={[styles.title, { fontSize: 18, marginTop: 20 }]}>
-          Daftar Produk
-        </Text>
-        {kategoriList.map((kategoriItem) => {
-          const filtered = produkList.filter(
-            (p) => p.kategori === kategoriItem
-          );
-          if (filtered.length === 0) return null;
+        <Text style={[styles.title, { marginTop: 20 }]}>Daftar Produk</Text>
+        {kategoriList.map((kat) => {
+          const produkKat = produkList.filter((p) => p.kategori === kat);
+          if (produkKat.length === 0) return null;
           return (
-            <View key={kategoriItem} style={{ marginBottom: 20 }}>
-              <Text
-                style={{ fontWeight: "bold", fontSize: 16, marginBottom: 6 }}
-              >
-                {kategoriItem.toUpperCase()}
-              </Text>
-              {filtered.map((item) => (
-                <View key={item.id} style={styles.itemRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text>
-                      {item.nama} - Rp{item.harga}
-                    </Text>
-                    <Text style={{ fontSize: 12, color: "#666" }}>
-                      {item.kategori?.toUpperCase() ?? "-"}
-                    </Text>
-                  </View>
-                  {item.gambar && (
-                    <Image
-                      source={{ uri: item.gambar }}
-                      style={{ width: 40, height: 40, marginRight: 10 }}
-                    />
-                  )}
-                  <TouchableOpacity onPress={() => hapusProduk(item.id)}>
-                    <Text style={styles.hapus}>Hapus</Text>
+            <View key={kat} style={{ marginBottom: 20 }}>
+              <Text style={{ fontWeight: "bold" }}>{kat}</Text>
+              {produkKat.map((p) => (
+                <View key={p.id} style={styles.produkItem}>
+                  <Text>
+                    {p.nama} - Rp{p.harga}
+                  </Text>
+                  <TouchableOpacity onPress={() => hapusProduk(p.id)}>
+                    <Text style={{ color: "red" }}>Hapus</Text>
                   </TouchableOpacity>
                 </View>
               ))}
@@ -175,23 +185,16 @@ export default function KelolaProduk() {
         })}
       </ScrollView>
 
-      {/* Bottom Drawer Tab */}
       <View style={styles.bottomNav}>
         <TouchableOpacity
-          onPress={() => router.replace("/admin/dashboard")}
-          style={styles.navItem}
-        >
-          <Text style={styles.navText}>Dashboard</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => router.replace("/admin/produk")}
-          style={styles.navItem}
+          onPress={() => setTab("produk")}
+          style={[styles.navItem, tab === "produk" && styles.activeNav]}
         >
           <Text style={styles.navText}>Produk</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={() => router.replace("/admin/laporan")}
-          style={styles.navItem}
+          onPress={() => setTab("laporan")}
+          style={[styles.navItem, tab === "laporan" && styles.activeNav]}
         >
           <Text style={styles.navText}>Laporan</Text>
         </TouchableOpacity>
@@ -207,8 +210,8 @@ export default function KelolaProduk() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#fff" },
-  title: { fontSize: 24, fontWeight: "bold", marginBottom: 10 },
+  container: { padding: 20, backgroundColor: "#fff" },
+  title: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
   input: {
     borderWidth: 1,
     borderColor: "#ccc",
@@ -216,17 +219,36 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 10,
   },
-  button: { backgroundColor: "#007AFF", padding: 15, borderRadius: 8 },
-  btnText: { color: "#fff", fontWeight: "bold", textAlign: "center" },
-  itemRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderColor: "#eee",
+  kategoriRow: { flexDirection: "row", gap: 8, marginBottom: 12 },
+  kategoriBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: "#eee",
+    borderRadius: 6,
   },
-  hapus: { color: "red", fontWeight: "bold" },
+  kategoriAktif: {
+    backgroundColor: "#007AFF",
+  },
+  gambarBtn: {
+    backgroundColor: "#555",
+    padding: 10,
+    borderRadius: 6,
+    marginBottom: 10,
+    alignItems: "center",
+  },
+  tambahBtn: {
+    backgroundColor: "#007AFF",
+    padding: 14,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  produkItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
   bottomNav: {
     flexDirection: "row",
     justifyContent: "space-around",
@@ -241,30 +263,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: "#eee",
   },
+  activeNav: {
+    backgroundColor: "#007AFF",
+  },
   navText: {
     fontSize: 14,
     fontWeight: "bold",
-  },
-  kategoriWrapper: {
-    flexDirection: "row",
-    marginBottom: 10,
-    gap: 6,
-  },
-  kategoriBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderRadius: 8,
-    borderColor: "#aaa",
-  },
-  kategoriActive: {
-    backgroundColor: "#007AFF",
-    borderColor: "#007AFF",
-  },
-  pilihGambarBtn: {
-    backgroundColor: "#555",
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 10,
   },
 });

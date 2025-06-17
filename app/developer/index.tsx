@@ -1,9 +1,9 @@
-// Developer Dashboard dengan Bottom Tabs
+// ✅ app/developer/index.tsx - Developer Dashboard + Tambah Akun + Tab + Fix Back
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import DeveloperDashboard from "./dashboard/index"; // atau "./dashboard/index" kalau folder
-import TambahAkun from "./tambah-akun";
+import DeveloperDashboard from "./dashboard/index";
+import TambahAkun from "./tambah-akun/index";
 
 export default function DeveloperIndex() {
   const [tab, setTab] = useState<"dashboard" | "akun">("dashboard");
@@ -13,7 +13,11 @@ export default function DeveloperIndex() {
     <View style={{ flex: 1 }}>
       {/* Konten berdasarkan tab */}
       <View style={{ flex: 1 }}>
-        {tab === "dashboard" ? <DeveloperDashboard /> : <TambahAkun />}
+        {tab === "dashboard" ? (
+          <DeveloperDashboard />
+        ) : (
+          <TambahAkun onSukses={() => setTab("dashboard")} />
+        )}
       </View>
 
       {/* Bottom Tabs */}
