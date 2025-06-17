@@ -1,7 +1,6 @@
-// app/developer/tambah-akun/index.tsx
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import { addDoc, collection } from "firebase/firestore";
+import { addDoc, collection, doc, getDoc, setDoc } from "firebase/firestore"; // ✅ PENTING: tambahkan setDoc dan doc
 import React, { useState } from "react";
 import {
   Alert,
@@ -44,6 +43,7 @@ export default function TambahAkunScreen({ onSukses }: TambahAkunProps) {
       return Alert.alert("Semua field wajib diisi");
 
     try {
+      // Simpan akun baru ke koleksi users
       await addDoc(collection(db, "users"), {
         username,
         password,
@@ -52,10 +52,20 @@ export default function TambahAkunScreen({ onSukses }: TambahAkunProps) {
         plan,
       });
 
-      await addDoc(collection(db, "toko"), {
-        id: tokoId,
-        nama: tokoId,
-      });
+      // Cek apakah toko dengan ID ini sudah ada
+      const tokoRef = doc(db, "toko", tokoId);
+      const tokoSnap = await getDoc(tokoRef);
+
+      if (!tokoSnap.exists()) {
+        // Jika belum ada → tambahkan dokumen toko baru
+        await setDoc(tokoRef, {
+          id: tokoId,
+          nama: tokoId,
+        });
+        console.log(`✅ Toko ${tokoId} berhasil dibuat`);
+      } else {
+        console.log(`ℹ️ Toko ${tokoId} sudah ada`);
+      }
 
       Alert.alert("Berhasil", "Akun berhasil ditambahkan");
       setUsername("");
@@ -66,6 +76,7 @@ export default function TambahAkunScreen({ onSukses }: TambahAkunProps) {
 
       if (onSukses) onSukses();
     } catch (error) {
+      console.error("❌ Error simpan akun:", error);
       Alert.alert("Gagal", "Terjadi kesalahan saat menyimpan akun");
     }
   };

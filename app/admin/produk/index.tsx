@@ -1,20 +1,19 @@
-// ✅ Kelola Produk - Versi Admin: Produk Berdasarkan tokoId Login + Bottom Bar
-
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import {
-  addDoc,
   collection,
   deleteDoc,
   doc,
   getDocs,
   query,
+  setDoc,
   where,
 } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -78,11 +77,7 @@ export default function ProdukAdmin() {
     if (!nama || !harga || !kategori) {
       return Alert.alert("Lengkapi semua input");
     }
-
-    if (!tokoId) {
-      console.log("❌ tokoId kosong saat tambah produk!");
-      return Alert.alert("Error", "Toko ID belum dimuat, coba ulangi.");
-    }
+    if (!tokoId) return Alert.alert("Error", "Toko ID belum dimuat");
 
     try {
       const newProduk: any = {
@@ -93,7 +88,9 @@ export default function ProdukAdmin() {
       };
       if (gambar) newProduk.gambar = gambar;
 
-      await addDoc(collection(db, "produk"), newProduk);
+      // Gunakan ID gabungan dari nama + tokoId
+      const docId = `${nama}-${tokoId}`.toLowerCase().replace(/\s+/g, "-");
+      await setDoc(doc(db, "produk", docId), newProduk);
 
       Alert.alert("Berhasil", "Produk ditambahkan");
       setNama("");
@@ -101,14 +98,13 @@ export default function ProdukAdmin() {
       setGambar(undefined);
       await ambilProduk(tokoId);
     } catch (err: any) {
-      console.error("❌ Gagal menyimpan produk:", err.message || err);
-      Alert.alert("Gagal", "Gagal menyimpan produk");
+      Alert.alert("Gagal", err.message || "Gagal menyimpan produk");
     }
   };
 
   const hapusProduk = async (id: string) => {
     await deleteDoc(doc(db, "produk", id));
-    ambilProduk();
+    await ambilProduk(tokoId);
   };
 
   const logout = async () => {
@@ -117,25 +113,28 @@ export default function ProdukAdmin() {
   };
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: "#f9f9f9" }}>
       <ScrollView style={styles.container}>
-        <Text style={styles.title}>Kelola Produk</Text>
+        <Text style={styles.pageTitle}>🛒 Kelola Produk</Text>
 
+        <Text style={styles.sectionLabel}>Nama Produk</Text>
         <TextInput
-          placeholder="Nama Produk"
+          placeholder="Contoh: Nasi Goreng"
           value={nama}
           onChangeText={setNama}
           style={styles.input}
         />
+
+        <Text style={styles.sectionLabel}>Harga Produk</Text>
         <TextInput
-          placeholder="Harga"
+          placeholder="Contoh: 12000"
           value={harga}
           onChangeText={setHarga}
           keyboardType="numeric"
           style={styles.input}
         />
 
-        <Text style={{ fontWeight: "bold", marginBottom: 6 }}>Kategori:</Text>
+        <Text style={styles.sectionLabel}>Kategori</Text>
         <View style={styles.kategoriRow}>
           {kategoriList.map((k) => (
             <TouchableOpacity
@@ -154,8 +153,23 @@ export default function ProdukAdmin() {
         </View>
 
         <TouchableOpacity onPress={pilihGambar} style={styles.gambarBtn}>
-          <Text style={{ color: "white" }}>Pilih Gambar</Text>
+          <Text style={{ color: "white" }}>
+            {gambar ? "Ganti Gambar" : "Pilih Gambar"}
+          </Text>
         </TouchableOpacity>
+
+        {gambar && (
+          <Image
+            source={{ uri: gambar }}
+            style={{
+              width: "100%",
+              height: 150,
+              borderRadius: 8,
+              marginTop: 10,
+              marginBottom: 10,
+            }}
+          />
+        )}
 
         <TouchableOpacity onPress={tambahProduk} style={styles.tambahBtn}>
           <Text style={{ color: "white", fontWeight: "bold" }}>
@@ -163,16 +177,18 @@ export default function ProdukAdmin() {
           </Text>
         </TouchableOpacity>
 
-        <Text style={[styles.title, { marginTop: 20 }]}>Daftar Produk</Text>
+        <Text style={[styles.pageTitle, { marginTop: 24 }]}>
+          📦 Daftar Produk
+        </Text>
         {kategoriList.map((kat) => {
           const produkKat = produkList.filter((p) => p.kategori === kat);
           if (produkKat.length === 0) return null;
           return (
             <View key={kat} style={{ marginBottom: 20 }}>
-              <Text style={{ fontWeight: "bold" }}>{kat}</Text>
+              <Text style={styles.kategoriJudul}>{kat}</Text>
               {produkKat.map((p) => (
                 <View key={p.id} style={styles.produkItem}>
-                  <Text>
+                  <Text style={{ flex: 1 }}>
                     {p.nama} - Rp{p.harga}
                   </Text>
                   <TouchableOpacity onPress={() => hapusProduk(p.id)}>
@@ -190,13 +206,21 @@ export default function ProdukAdmin() {
           onPress={() => setTab("produk")}
           style={[styles.navItem, tab === "produk" && styles.activeNav]}
         >
-          <Text style={styles.navText}>Produk</Text>
+          <Text
+            style={[styles.navText, tab === "produk" && { color: "white" }]}
+          >
+            Produk
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => setTab("laporan")}
           style={[styles.navItem, tab === "laporan" && styles.activeNav]}
         >
-          <Text style={styles.navText}>Laporan</Text>
+          <Text
+            style={[styles.navText, tab === "laporan" && { color: "white" }]}
+          >
+            Laporan
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={logout}
@@ -210,21 +234,37 @@ export default function ProdukAdmin() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20, backgroundColor: "#fff" },
-  title: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
+  container: { padding: 20 },
+  pageTitle: {
+    fontSize: 22,
+    fontWeight: "bold",
+    marginBottom: 16,
+    color: "#333",
+  },
+  sectionLabel: {
+    fontWeight: "bold",
+    marginBottom: 6,
+    marginTop: 12,
+    color: "#555",
+  },
   input: {
     borderWidth: 1,
     borderColor: "#ccc",
-    borderRadius: 8,
     padding: 10,
-    marginBottom: 10,
+    borderRadius: 8,
+    backgroundColor: "white",
   },
-  kategoriRow: { flexDirection: "row", gap: 8, marginBottom: 12 },
+  kategoriRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 12,
+  },
   kategoriBtn: {
     paddingVertical: 6,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     backgroundColor: "#eee",
-    borderRadius: 6,
+    borderRadius: 20,
   },
   kategoriAktif: {
     backgroundColor: "#007AFF",
@@ -232,36 +272,48 @@ const styles = StyleSheet.create({
   gambarBtn: {
     backgroundColor: "#555",
     padding: 10,
-    borderRadius: 6,
-    marginBottom: 10,
+    borderRadius: 8,
     alignItems: "center",
+    marginBottom: 12,
   },
   tambahBtn: {
-    backgroundColor: "#007AFF",
+    backgroundColor: "#28a745",
     padding: 14,
     borderRadius: 8,
     alignItems: "center",
+    marginTop: 10,
+  },
+  kategoriJudul: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 8,
+    color: "#222",
   },
   produkItem: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    backgroundColor: "#fff",
+    padding: 12,
+    borderRadius: 6,
+    marginBottom: 6,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
   },
   bottomNav: {
     flexDirection: "row",
     justifyContent: "space-around",
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderTopWidth: 1,
     borderColor: "#ddd",
     backgroundColor: "#f9f9f9",
   },
   navItem: {
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: "#eee",
+    backgroundColor: "#ddd",
   },
   activeNav: {
     backgroundColor: "#007AFF",
