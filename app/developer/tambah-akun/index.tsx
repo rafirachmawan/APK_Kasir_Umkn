@@ -1,5 +1,3 @@
-// ✅ Tambah Akun / Toko - Dengan Toggle Form
-
 import { useRouter } from "expo-router";
 import {
   addDoc,
@@ -14,10 +12,14 @@ import {
 import React, { useEffect, useState } from "react";
 import {
   Alert,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import DropDownPicker from "react-native-dropdown-picker";
@@ -48,6 +50,8 @@ export default function TambahAkunScreen() {
     { label: "Free", value: "free" },
     { label: "Pro", value: "pro" },
   ];
+
+  const [openToko, setOpenToko] = useState(false);
 
   useEffect(() => {
     const fetchToko = async () => {
@@ -100,109 +104,129 @@ export default function TambahAkunScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>
-        Tambah {mode === "tambahAkun" ? "Akun" : "Toko"}
-      </Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={100}
+      style={{ flex: 1 }}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.container}>
+          <Text style={styles.title}>
+            Tambah {mode === "tambahAkun" ? "Akun" : "Toko"}
+          </Text>
 
-      <View style={{ flexDirection: "row", marginBottom: 20 }}>
-        <TouchableOpacity
-          style={[styles.switchBtn, mode === "tambahAkun" && styles.activeBtn]}
-          onPress={() => setMode("tambahAkun")}
-        >
-          <Text style={styles.switchText}>Tambah Akun</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.switchBtn, mode === "tambahToko" && styles.activeBtn]}
-          onPress={() => setMode("tambahToko")}
-        >
-          <Text style={styles.switchText}>Tambah Toko</Text>
-        </TouchableOpacity>
-      </View>
+          <View style={{ flexDirection: "row", marginBottom: 20 }}>
+            <TouchableOpacity
+              style={[
+                styles.switchBtn,
+                mode === "tambahAkun" && styles.activeBtn,
+              ]}
+              onPress={() => setMode("tambahAkun")}
+            >
+              <Text style={styles.switchText}>Tambah Akun</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.switchBtn,
+                mode === "tambahToko" && styles.activeBtn,
+              ]}
+              onPress={() => setMode("tambahToko")}
+            >
+              <Text style={styles.switchText}>Tambah Toko</Text>
+            </TouchableOpacity>
+          </View>
 
-      {mode === "tambahAkun" ? (
-        <>
-          <Text style={styles.label}>Username</Text>
-          <TextInput
-            placeholder="Username unik"
-            value={username}
-            onChangeText={setUsername}
-            style={styles.input}
-          />
+          {mode === "tambahAkun" ? (
+            <>
+              <Text style={styles.label}>Username</Text>
+              <TextInput
+                placeholder="Username unik"
+                value={username}
+                onChangeText={setUsername}
+                style={styles.input}
+              />
 
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            placeholder="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            style={styles.input}
-          />
+              <Text style={styles.label}>Password</Text>
+              <TextInput
+                placeholder="Password"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                style={styles.input}
+              />
 
-          <Text style={styles.label}>Role</Text>
-          <DropDownPicker
-            open={openRole}
-            value={role}
-            items={roleOptions}
-            setOpen={setOpenRole}
-            setValue={setRole}
-            setItems={() => {}}
-            placeholder="Pilih role"
-            style={styles.dropdown}
-            dropDownContainerStyle={{ borderColor: "#ccc" }}
-          />
+              <Text style={styles.label}>Role</Text>
+              <View style={{ zIndex: 3000 }}>
+                <DropDownPicker
+                  open={openRole}
+                  value={role}
+                  items={roleOptions}
+                  setOpen={setOpenRole}
+                  setValue={setRole}
+                  setItems={() => {}}
+                  placeholder="Pilih role"
+                  style={styles.dropdown}
+                  dropDownContainerStyle={{ borderColor: "#ccc" }}
+                />
+              </View>
 
-          <Text style={styles.label}>Toko</Text>
-          <DropDownPicker
-            open={false}
-            value={tokoId}
-            items={daftarToko}
-            setOpen={() => {}}
-            setValue={setTokoId}
-            setItems={() => {}}
-            placeholder="Pilih toko"
-            style={styles.dropdown}
-            dropDownContainerStyle={{ borderColor: "#ccc" }}
-          />
+              <Text style={styles.label}>Toko</Text>
+              <View style={{ zIndex: 2000 }}>
+                <DropDownPicker
+                  open={openToko}
+                  value={tokoId}
+                  items={daftarToko}
+                  setOpen={setOpenToko}
+                  setValue={setTokoId}
+                  setItems={setDaftarToko}
+                  placeholder="Pilih toko"
+                  style={styles.dropdown}
+                  dropDownContainerStyle={{ borderColor: "#ccc" }}
+                />
+              </View>
 
-          <Text style={styles.label}>Plan</Text>
-          <DropDownPicker
-            open={openPlan}
-            value={plan}
-            items={planOptions}
-            setOpen={setOpenPlan}
-            setValue={setPlan}
-            setItems={() => {}}
-            placeholder="Pilih plan"
-            style={styles.dropdown}
-            dropDownContainerStyle={{ borderColor: "#ccc" }}
-          />
+              <Text style={styles.label}>Plan</Text>
+              <View style={{ zIndex: 1000 }}>
+                <DropDownPicker
+                  open={openPlan}
+                  value={plan}
+                  items={planOptions}
+                  setOpen={setOpenPlan}
+                  setValue={setPlan}
+                  setItems={() => {}}
+                  placeholder="Pilih plan"
+                  style={styles.dropdown}
+                  dropDownContainerStyle={{ borderColor: "#ccc" }}
+                />
+              </View>
 
-          <TouchableOpacity onPress={simpanAkun} style={styles.button}>
-            <Text style={styles.btnText}>Simpan Akun</Text>
-          </TouchableOpacity>
-        </>
-      ) : (
-        <>
-          <Text style={styles.label}>Nama Toko (ID)</Text>
-          <TextInput
-            placeholder="Contoh: toko-abc"
-            value={tokoId}
-            onChangeText={setTokoId}
-            style={styles.input}
-          />
+              <TouchableOpacity onPress={simpanAkun} style={styles.button}>
+                <Text style={styles.btnText}>Simpan Akun</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <Text style={styles.label}>Nama Toko (ID)</Text>
+              <TextInput
+                placeholder="Contoh: toko-abc"
+                value={tokoId}
+                onChangeText={setTokoId}
+                style={styles.input}
+              />
 
-          <TouchableOpacity onPress={simpanToko} style={styles.button}>
-            <Text style={styles.btnText}>Simpan Toko</Text>
-          </TouchableOpacity>
-        </>
-      )}
-    </View>
+              <TouchableOpacity onPress={simpanToko} style={styles.button}>
+                <Text style={styles.btnText}>Simpan Toko</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#fff" },
+  container: { padding: 20, backgroundColor: "#fff" },
   title: { fontSize: 24, fontWeight: "bold", marginBottom: 20 },
   label: { fontWeight: "bold", marginBottom: 6, marginTop: 10 },
   input: {
