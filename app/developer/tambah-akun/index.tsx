@@ -1,7 +1,17 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+// ✅ Tambah Akun / Toko - Dengan Toggle Form
+
 import { useRouter } from "expo-router";
-import { addDoc, collection, doc, getDoc, setDoc } from "firebase/firestore"; // ✅ PENTING: tambahkan setDoc dan doc
-import React, { useState } from "react";
+import {
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  setDoc,
+  where,
+} from "firebase/firestore";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   StyleSheet,
@@ -13,12 +23,13 @@ import {
 import DropDownPicker from "react-native-dropdown-picker";
 import { db } from "../../../utils/firebase";
 
-interface TambahAkunProps {
-  onSukses?: () => void;
-}
-
-export default function TambahAkunScreen({ onSukses }: TambahAkunProps) {
+export default function TambahAkunScreen() {
   const router = useRouter();
+
+  const [mode, setMode] = useState("tambahToko"); // "tambahToko" | "tambahAkun"
+  const [daftarToko, setDaftarToko] = useState<
+    { label: string; value: string }[]
+  >([]);
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -38,116 +49,154 @@ export default function TambahAkunScreen({ onSukses }: TambahAkunProps) {
     { label: "Pro", value: "pro" },
   ];
 
+  useEffect(() => {
+    const fetchToko = async () => {
+      const snapshot = await getDocs(collection(db, "toko"));
+      const list = snapshot.docs.map((doc) => ({
+        label: doc.data().nama,
+        value: doc.id,
+      }));
+      setDaftarToko(list);
+    };
+    fetchToko();
+  }, []);
+
   const simpanAkun = async () => {
     if (!username || !password || !role || !tokoId)
       return Alert.alert("Semua field wajib diisi");
 
-    try {
-      // Simpan akun baru ke koleksi users
-      await addDoc(collection(db, "users"), {
-        username,
-        password,
-        role,
-        tokoId,
-        plan,
-      });
+    const cekQuery = query(
+      collection(db, "users"),
+      where("username", "==", username)
+    );
+    const cekSnap = await getDocs(cekQuery);
+    if (!cekSnap.empty) return Alert.alert("Username sudah digunakan");
 
-      // Cek apakah toko dengan ID ini sudah ada
-      const tokoRef = doc(db, "toko", tokoId);
-      const tokoSnap = await getDoc(tokoRef);
+    await addDoc(collection(db, "users"), {
+      username,
+      password,
+      role,
+      tokoId,
+      plan,
+    });
 
-      if (!tokoSnap.exists()) {
-        // Jika belum ada → tambahkan dokumen toko baru
-        await setDoc(tokoRef, {
-          id: tokoId,
-          nama: tokoId,
-        });
-        console.log(`✅ Toko ${tokoId} berhasil dibuat`);
-      } else {
-        console.log(`ℹ️ Toko ${tokoId} sudah ada`);
-      }
-
-      Alert.alert("Berhasil", "Akun berhasil ditambahkan");
-      setUsername("");
-      setPassword("");
-      setRole("");
-      setTokoId("");
-      setPlan("free");
-
-      if (onSukses) onSukses();
-    } catch (error) {
-      console.error("❌ Error simpan akun:", error);
-      Alert.alert("Gagal", "Terjadi kesalahan saat menyimpan akun");
-    }
+    Alert.alert("Berhasil", "Akun berhasil ditambahkan");
+    setUsername("");
+    setPassword("");
+    setRole("");
+    setTokoId("");
+    setPlan("free");
   };
 
-  const logout = async () => {
-    await AsyncStorage.removeItem("user");
-    router.replace("/auth/login");
+  const simpanToko = async () => {
+    if (!tokoId) return Alert.alert("Nama toko wajib diisi");
+    const tokoRef = doc(db, "toko", tokoId);
+    const tokoSnap = await getDoc(tokoRef);
+    if (tokoSnap.exists()) return Alert.alert("Toko sudah ada");
+
+    await setDoc(tokoRef, { id: tokoId, nama: tokoId });
+    Alert.alert("Toko berhasil ditambahkan");
+    setTokoId("");
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Tambah Akun Baru</Text>
+      <Text style={styles.title}>
+        Tambah {mode === "tambahAkun" ? "Akun" : "Toko"}
+      </Text>
 
-      <Text style={styles.label}>Username</Text>
-      <TextInput
-        placeholder="Masukkan username"
-        value={username}
-        onChangeText={setUsername}
-        style={styles.input}
-      />
+      <View style={{ flexDirection: "row", marginBottom: 20 }}>
+        <TouchableOpacity
+          style={[styles.switchBtn, mode === "tambahAkun" && styles.activeBtn]}
+          onPress={() => setMode("tambahAkun")}
+        >
+          <Text style={styles.switchText}>Tambah Akun</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.switchBtn, mode === "tambahToko" && styles.activeBtn]}
+          onPress={() => setMode("tambahToko")}
+        >
+          <Text style={styles.switchText}>Tambah Toko</Text>
+        </TouchableOpacity>
+      </View>
 
-      <Text style={styles.label}>Password</Text>
-      <TextInput
-        placeholder="Masukkan password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        style={styles.input}
-      />
+      {mode === "tambahAkun" ? (
+        <>
+          <Text style={styles.label}>Username</Text>
+          <TextInput
+            placeholder="Username unik"
+            value={username}
+            onChangeText={setUsername}
+            style={styles.input}
+          />
 
-      <Text style={styles.label}>Role</Text>
-      <DropDownPicker
-        open={openRole}
-        value={role}
-        items={roleOptions}
-        setOpen={setOpenRole}
-        setValue={setRole}
-        setItems={() => {}}
-        placeholder="Pilih role"
-        style={styles.dropdown}
-        dropDownContainerStyle={{ borderColor: "#ccc" }}
-      />
+          <Text style={styles.label}>Password</Text>
+          <TextInput
+            placeholder="Password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            style={styles.input}
+          />
 
-      <Text style={styles.label}>Toko ID</Text>
-      <TextInput
-        placeholder="Misal: toko-abc"
-        value={tokoId}
-        onChangeText={setTokoId}
-        style={styles.input}
-      />
+          <Text style={styles.label}>Role</Text>
+          <DropDownPicker
+            open={openRole}
+            value={role}
+            items={roleOptions}
+            setOpen={setOpenRole}
+            setValue={setRole}
+            setItems={() => {}}
+            placeholder="Pilih role"
+            style={styles.dropdown}
+            dropDownContainerStyle={{ borderColor: "#ccc" }}
+          />
 
-      <Text style={styles.label}>Plan</Text>
-      <DropDownPicker
-        open={openPlan}
-        value={plan}
-        items={planOptions}
-        setOpen={setOpenPlan}
-        setValue={setPlan}
-        setItems={() => {}}
-        placeholder="Pilih plan"
-        style={styles.dropdown}
-        dropDownContainerStyle={{ borderColor: "#ccc" }}
-      />
+          <Text style={styles.label}>Toko</Text>
+          <DropDownPicker
+            open={false}
+            value={tokoId}
+            items={daftarToko}
+            setOpen={() => {}}
+            setValue={setTokoId}
+            setItems={() => {}}
+            placeholder="Pilih toko"
+            style={styles.dropdown}
+            dropDownContainerStyle={{ borderColor: "#ccc" }}
+          />
 
-      <TouchableOpacity onPress={simpanAkun} style={styles.button}>
-        <Text style={styles.btnText}>Simpan Akun</Text>
-      </TouchableOpacity>
+          <Text style={styles.label}>Plan</Text>
+          <DropDownPicker
+            open={openPlan}
+            value={plan}
+            items={planOptions}
+            setOpen={setOpenPlan}
+            setValue={setPlan}
+            setItems={() => {}}
+            placeholder="Pilih plan"
+            style={styles.dropdown}
+            dropDownContainerStyle={{ borderColor: "#ccc" }}
+          />
 
-      <TouchableOpacity onPress={logout} style={styles.logoutButton}>
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
+          <TouchableOpacity onPress={simpanAkun} style={styles.button}>
+            <Text style={styles.btnText}>Simpan Akun</Text>
+          </TouchableOpacity>
+        </>
+      ) : (
+        <>
+          <Text style={styles.label}>Nama Toko (ID)</Text>
+          <TextInput
+            placeholder="Contoh: toko-abc"
+            value={tokoId}
+            onChangeText={setTokoId}
+            style={styles.input}
+          />
+
+          <TouchableOpacity onPress={simpanToko} style={styles.button}>
+            <Text style={styles.btnText}>Simpan Toko</Text>
+          </TouchableOpacity>
+        </>
+      )}
     </View>
   );
 }
@@ -176,15 +225,19 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   btnText: { color: "white", fontWeight: "bold", textAlign: "center" },
-  logoutButton: {
-    marginTop: 30,
-    padding: 12,
-    backgroundColor: "red",
-    borderRadius: 8,
+  switchBtn: {
+    flex: 1,
+    padding: 10,
+    backgroundColor: "#eee",
+    borderRadius: 6,
+    marginHorizontal: 5,
   },
-  logoutText: {
-    color: "#fff",
+  activeBtn: {
+    backgroundColor: "#007AFF",
+  },
+  switchText: {
     textAlign: "center",
+    color: "#fff",
     fontWeight: "bold",
   },
 });

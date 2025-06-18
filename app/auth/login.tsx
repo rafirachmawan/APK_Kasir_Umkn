@@ -1,3 +1,5 @@
+// ✅ Login Akun Berdasarkan Username dan Password
+
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { collection, getDocs, query, where } from "firebase/firestore";
@@ -36,10 +38,8 @@ export default function LoginScreen() {
         return Alert.alert("Password salah");
       }
 
-      // Simpan user ke AsyncStorage
       await AsyncStorage.setItem("user", JSON.stringify(user));
 
-      // Redirect sesuai role
       if (user.role === "developer") router.replace("/developer");
       else if (user.role === "admin") router.replace("/admin/dashboard");
       else if (user.role === "kasir") router.replace("/kasir/penjualan");
@@ -52,7 +52,6 @@ export default function LoginScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Login Kasir UMKM</Text>
-
       <TextInput
         placeholder="Username"
         value={username}
@@ -66,7 +65,6 @@ export default function LoginScreen() {
         secureTextEntry
         style={styles.input}
       />
-
       <TouchableOpacity onPress={login} style={styles.button}>
         <Text style={styles.buttonText}>Masuk</Text>
       </TouchableOpacity>
