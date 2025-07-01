@@ -1,13 +1,28 @@
-// ✅ app/developer/index.tsx - Developer Dashboard + Tambah Akun + Tab + Fix Back
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import DeveloperDashboard from "./dashboard/index";
 import TambahAkun from "./tambah-akun/index";
+import TambahToko from "./tambah-toko/index"; // ✅ import komponen baru
 
 export default function DeveloperIndex() {
-  const [tab, setTab] = useState<"dashboard" | "akun">("dashboard");
+  const [tab, setTab] = useState<"dashboard" | "akun" | "toko">("dashboard");
   const router = useRouter();
+
+  const handleLogout = async () => {
+    Alert.alert("Logout", "Yakin ingin logout?", [
+      { text: "Batal", style: "cancel" },
+      {
+        text: "Logout",
+        style: "destructive",
+        onPress: async () => {
+          await AsyncStorage.removeItem("user");
+          router.replace("/auth/login");
+        },
+      },
+    ]);
+  };
 
   return (
     <View style={{ flex: 1 }}>
@@ -15,8 +30,10 @@ export default function DeveloperIndex() {
       <View style={{ flex: 1 }}>
         {tab === "dashboard" ? (
           <DeveloperDashboard />
-        ) : (
+        ) : tab === "akun" ? (
           <TambahAkun onSukses={() => setTab("dashboard")} />
+        ) : (
+          <TambahToko onSukses={() => setTab("dashboard")} /> // ✅ TambahToko
         )}
       </View>
 
@@ -28,13 +45,26 @@ export default function DeveloperIndex() {
         >
           <Text style={styles.navText}>Dashboard</Text>
         </TouchableOpacity>
+
         <TouchableOpacity
           onPress={() => setTab("akun")}
           style={[styles.navItem, tab === "akun" && styles.activeNav]}
         >
           <Text style={styles.navText}>Tambah Akun</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => setTab("toko")}
+          style={[styles.navItem, tab === "toko" && styles.activeNav]}
+        >
+          <Text style={styles.navText}>Tambah Toko</Text>
+        </TouchableOpacity>
       </View>
+
+      {/* Tombol Logout */}
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <Text style={styles.logoutText}>Logout</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -61,5 +91,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "bold",
     color: "#000",
+  },
+  logoutButton: {
+    paddingVertical: 14,
+    alignItems: "center",
+    backgroundColor: "#007AFF",
+  },
+  logoutText: {
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 16,
   },
 });
