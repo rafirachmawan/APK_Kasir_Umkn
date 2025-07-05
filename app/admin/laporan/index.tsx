@@ -3,7 +3,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import * as FileSystem from "expo-file-system";
 import { useRouter } from "expo-router";
 import * as Sharing from "expo-sharing";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
@@ -30,6 +30,21 @@ export default function LaporanPenjualan() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const slideAnim = useRef(new Animated.Value(-width)).current;
+
+  const [username, setUsername] = useState("");
+  const [namaToko, setNamaToko] = useState("");
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const userStr = await AsyncStorage.getItem("user");
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        setUsername(user.username || "Admin");
+        setNamaToko(user.namaToko || "Toko Anda");
+      }
+    };
+    loadUser();
+  }, []);
 
   const toggleSidebar = () => {
     Animated.timing(slideAnim, {
@@ -144,72 +159,79 @@ export default function LaporanPenjualan() {
         </Animated.View>
 
         {/* Konten */}
-        <View style={styles.container}>
-          <TouchableOpacity onPress={toggleSidebar} style={styles.menuButton}>
-            <Text style={styles.menuText}>{sidebarOpen ? "✕" : "☰"}</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.title}>📊 Laporan Penjualan</Text>
-
-          <View style={styles.dateRow}>
-            <TouchableOpacity
-              onPress={() => setShowDari(true)}
-              style={styles.dateBtn}
-            >
-              <Text>Dari: {formatDate(tanggalDari)}</Text>
+        <View style={{ flex: 1 }}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={toggleSidebar} style={styles.menuButton}>
+              <Text style={styles.menuText}>{sidebarOpen ? "✕" : "☰"}</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setShowSampai(true)}
-              style={styles.dateBtn}
-            >
-              <Text>Sampai: {formatDate(tanggalSampai)}</Text>
-            </TouchableOpacity>
+            <Text style={styles.headerText}>
+              Halo, {username} dari {namaToko}
+            </Text>
           </View>
 
-          {showDari && (
-            <DateTimePicker
-              value={tanggalDari}
-              mode="date"
-              display={Platform.OS === "ios" ? "inline" : "default"}
-              onChange={(_, selected) => {
-                setShowDari(false);
-                if (selected) setTanggalDari(selected);
-              }}
-            />
-          )}
-          {showSampai && (
-            <DateTimePicker
-              value={tanggalSampai}
-              mode="date"
-              display={Platform.OS === "ios" ? "inline" : "default"}
-              onChange={(_, selected) => {
-                setShowSampai(false);
-                if (selected) setTanggalSampai(selected);
-              }}
-            />
-          )}
+          <View style={styles.container}>
+            <Text style={styles.pageTitle}>📑 Laporan Penjualan</Text>
 
-          <FlatList
-            data={filterData()}
-            renderItem={({ item }) => (
-              <View style={styles.item}>
-                <Text>
-                  {item.tanggal} - {item.kasir}
-                </Text>
-                <Text style={{ fontWeight: "bold" }}>
-                  Rp{item.total.toLocaleString()}
-                </Text>
-              </View>
+            <View style={styles.dateRow}>
+              <TouchableOpacity
+                onPress={() => setShowDari(true)}
+                style={styles.dateBtn}
+              >
+                <Text>Dari: {formatDate(tanggalDari)}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setShowSampai(true)}
+                style={styles.dateBtn}
+              >
+                <Text>Sampai: {formatDate(tanggalSampai)}</Text>
+              </TouchableOpacity>
+            </View>
+
+            {showDari && (
+              <DateTimePicker
+                value={tanggalDari}
+                mode="date"
+                display={Platform.OS === "ios" ? "inline" : "default"}
+                onChange={(_, selected) => {
+                  setShowDari(false);
+                  if (selected) setTanggalDari(selected);
+                }}
+              />
             )}
-            keyExtractor={(item) => item.id}
-            style={{ marginTop: 20 }}
-          />
+            {showSampai && (
+              <DateTimePicker
+                value={tanggalSampai}
+                mode="date"
+                display={Platform.OS === "ios" ? "inline" : "default"}
+                onChange={(_, selected) => {
+                  setShowSampai(false);
+                  if (selected) setTanggalSampai(selected);
+                }}
+              />
+            )}
 
-          <TouchableOpacity onPress={exportToExcel} style={styles.exportBtn}>
-            <Text style={{ color: "white", fontWeight: "bold" }}>
-              📥 Export ke Excel
-            </Text>
-          </TouchableOpacity>
+            <FlatList
+              data={filterData()}
+              renderItem={({ item }) => (
+                <View style={styles.item}>
+                  <Text>
+                    {item.tanggal} - {item.kasir}
+                  </Text>
+                  <Text style={{ fontWeight: "bold" }}>
+                    Rp{item.total.toLocaleString()}
+                  </Text>
+                </View>
+              )}
+              keyExtractor={(item) => item.id}
+              style={{ marginTop: 20 }}
+            />
+
+            <TouchableOpacity onPress={exportToExcel} style={styles.exportBtn}>
+              <Text style={{ color: "white", fontWeight: "bold" }}>
+                📥 Export ke Excel
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </TouchableWithoutFeedback>
@@ -269,27 +291,37 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 16,
   },
+  header: {
+    padding: 20,
+    backgroundColor: "#4e54c8",
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  headerText: {
+    color: "white",
+    fontSize: 16,
+    marginLeft: 10,
+    fontWeight: "bold",
+    flexShrink: 1,
+  },
+  menuButton: {
+    padding: 8,
+  },
+  menuText: {
+    color: "white",
+    fontSize: 22,
+    fontWeight: "bold",
+  },
   container: {
     flex: 1,
     backgroundColor: "#f9f9f9",
     padding: 20,
   },
-  menuButton: {
-    position: "absolute",
-    top: 10,
-    left: 10,
-    zIndex: 20,
-  },
-  menuText: {
-    fontSize: 26,
-    fontWeight: "bold",
-    color: "#4e54c8",
-  },
-  title: {
+  pageTitle: {
     fontSize: 20,
     fontWeight: "bold",
     marginBottom: 20,
-    marginTop: 40,
+    marginTop: 10,
   },
   dateRow: {
     flexDirection: "row",

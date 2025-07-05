@@ -85,12 +85,18 @@ export default function AdminDashboard() {
         </Animated.View>
 
         {/* Main Content */}
-        <View style={styles.mainContent}>
-          <TouchableOpacity onPress={toggleSidebar} style={styles.menuButton}>
-            <Text style={styles.menuText}>{sidebarOpen ? "✕" : "☰"}</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>Dashboard Admin UMKM</Text>
-          <Text style={styles.subtext}>Silakan pilih menu di kiri.</Text>
+        <View style={{ flex: 1 }}>
+          <View style={styles.blueHeader}>
+            <Text style={styles.blueHeaderText}>📊 Dashboard Admin</Text>
+          </View>
+
+          <View style={styles.mainContent}>
+            <TouchableOpacity onPress={toggleSidebar} style={styles.menuButton}>
+              <Text style={styles.menuText}>{sidebarOpen ? "✕" : "☰"}</Text>
+            </TouchableOpacity>
+            <Text style={styles.title}>Dashboard Admin UMKM</Text>
+            <Text style={styles.subtext}>Silakan pilih menu di kiri.</Text>
+          </View>
         </View>
       </View>
     </TouchableWithoutFeedback>
@@ -178,5 +184,15 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "bold",
     color: "#4e54c8",
+  },
+  blueHeader: {
+    backgroundColor: "#4e54c8",
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+  },
+  blueHeaderText: {
+    color: "white",
+    fontSize: 22,
+    fontWeight: "bold",
   },
 });
