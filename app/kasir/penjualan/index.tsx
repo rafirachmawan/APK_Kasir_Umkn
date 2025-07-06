@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
@@ -13,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { db } from "../../../utils/firebase";
 
 interface Produk {
   id: string;
@@ -44,20 +46,31 @@ export default function KasirPenjualan() {
 
   useEffect(() => {
     const ambilData = async () => {
-      const data = await AsyncStorage.getItem("produkList");
-      const user = await AsyncStorage.getItem("user");
-      if (data) {
-        const parsed = JSON.parse(data).map((p: any) => ({
-          ...p,
-          kategori: p.kategori ?? "makanan",
-        }));
-        setProdukList(parsed);
-      }
-      if (user) {
-        const parsedUser = JSON.parse(user);
-        setNamaToko(parsedUser?.tokoNama || "Toko");
-      }
+      const userStr = await AsyncStorage.getItem("user");
+      if (!userStr) return;
+
+      const user = JSON.parse(userStr);
+      setNamaToko(user.tokoNama || "Toko");
+
+      const q = query(
+        collection(db, "produk"),
+        where("tokoId", "==", user.tokoId)
+      );
+      const snapshot = await getDocs(q);
+      const data = snapshot.docs.map((doc) => {
+        const d = doc.data();
+        return {
+          id: doc.id,
+          nama: d.nama,
+          harga: d.harga,
+          kategori: d.kategori ?? "makanan",
+          gambar: d.gambar ?? "",
+        };
+      });
+
+      setProdukList(data);
     };
+
     ambilData();
   }, []);
 

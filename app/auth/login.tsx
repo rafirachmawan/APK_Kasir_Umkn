@@ -37,16 +37,20 @@ export default function LoginScreen() {
 
       if (snapshot.empty) return Alert.alert("Akun tidak ditemukan");
 
-      const user = snapshot.docs[0].data();
-      if (user.password !== password) {
-        return Alert.alert("Password salah");
-      }
+      // Cek password di semua akun yang cocok username-nya
+      const matchingUser = snapshot.docs
+        .map((doc) => doc.data())
+        .find((u) => u.password === password);
 
-      await AsyncStorage.setItem("user", JSON.stringify(user));
+      if (!matchingUser) return Alert.alert("Password salah");
 
-      if (user.role === "developer") router.replace("/developer");
-      else if (user.role === "admin") router.replace("/admin/dashboard");
-      else if (user.role === "kasir") router.replace("/kasir/penjualan");
+      await AsyncStorage.setItem("user", JSON.stringify(matchingUser));
+
+      if (matchingUser.role === "developer") router.replace("/developer");
+      else if (matchingUser.role === "admin")
+        router.replace("/admin/dashboard");
+      else if (matchingUser.role === "kasir")
+        router.replace("/kasir/penjualan");
       else Alert.alert("Role tidak dikenali");
     } catch (err) {
       Alert.alert("Login gagal", String(err));
