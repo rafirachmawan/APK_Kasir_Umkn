@@ -38,8 +38,8 @@ export default function KasirPenjualan() {
   const [produkList, setProdukList] = useState<Produk[]>([]);
   const [keranjang, setKeranjang] = useState<Produk[]>([]);
   const [uangBayar, setUangBayar] = useState("");
-  const [kategori, setKategori] = useState<"makanan" | "minuman" | "cemilan">(
-    "makanan"
+  const [kategori, setKategori] = useState<"MAKANAN" | "MINUMAN" | "CEMILAN">(
+    "MAKANAN"
   );
   const [namaToko, setNamaToko] = useState("");
   const [lastKwitansi, setLastKwitansi] = useState<Transaksi | null>(null);
@@ -50,7 +50,9 @@ export default function KasirPenjualan() {
       if (!userStr) return;
 
       const user = JSON.parse(userStr);
-      setNamaToko(user.tokoNama || "Toko");
+      console.log("🔥 KASIR TOKO ID:", user.tokoId); // Debug log
+
+      setNamaToko(user.namaToko || "Toko");
 
       const q = query(
         collection(db, "produk"),
@@ -145,16 +147,14 @@ export default function KasirPenjualan() {
     router.replace("/auth/login");
   };
 
-  const kategoriFilter = ["makanan", "minuman", "cemilan"];
+  const kategoriFilter = ["MAKANAN", "MINUMAN", "CEMILAN"];
 
   return (
     <View style={{ flex: 1, backgroundColor: "#fff" }}>
-      {/* HEADER */}
       <View style={styles.header}>
         <Text style={styles.headerText}>{namaToko}</Text>
       </View>
 
-      {/* KATEGORI */}
       <View style={styles.kategoriRow}>
         {kategoriFilter.map((k) => (
           <TouchableOpacity
@@ -177,7 +177,6 @@ export default function KasirPenjualan() {
       </View>
 
       <ScrollView style={{ paddingHorizontal: 12 }}>
-        {/* PRODUK */}
         <FlatList
           data={produkList.filter((p) => p.kategori === kategori)}
           keyExtractor={(item) => item.id}
@@ -197,7 +196,6 @@ export default function KasirPenjualan() {
           )}
         />
 
-        {/* KERANJANG */}
         <Text style={styles.sectionTitle}>Keranjang</Text>
         {keranjangGrouped.length === 0 ? (
           <Text>Belum ada item di keranjang.</Text>
@@ -261,7 +259,6 @@ export default function KasirPenjualan() {
         )}
       </ScrollView>
 
-      {/* BOTTOM MENU */}
       <View style={styles.bottomNav}>
         <TouchableOpacity
           onPress={() => router.replace("/kasir/penjualan")}
